@@ -23,13 +23,7 @@ data class AlarmEntity(
         val now = Calendar.getInstance()
         val alarmTime = Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.timeMillis }
 
-        if (repeatMask == 0) { // Not repeating
-            if (alarmTime.before(now)) {
-                // If it's a one-time alarm in the past, it shouldn't be rescheduled.
-                // However, boot receiver logic might want to reschedule for the next day.
-                // Let's stick to the principle that one-time past alarms don't re-fire.
-                return timeMillis 
-            }
+        if (repeatMask == 0) {
             return timeMillis
         }
 
