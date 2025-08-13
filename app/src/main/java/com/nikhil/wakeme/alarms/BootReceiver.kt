@@ -1,5 +1,6 @@
 package com.nikhil.wakeme.alarms
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
+    @SuppressLint("MissingPermission")
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_MY_PACKAGE_REPLACED) {
@@ -48,6 +50,7 @@ class BootReceiver : BroadcastReceiver() {
                         Log.d("BootReceiver", "Alarm ${a.id} was in the past. Rescheduling for next day.")
                         a.timeMillis = System.currentTimeMillis() + 24 * 60 * 60 * 1000L
                     }
+                    // This is safe because we check canScheduleExactAlarms above.
                     AlarmScheduler.scheduleAlarm(appContext, a)
                 }
             }
@@ -107,4 +110,3 @@ class BootReceiver : BroadcastReceiver() {
         private const val PERMISSION_NOTIFICATION_ID = 1001 // Choose a unique ID
     }
 }
-

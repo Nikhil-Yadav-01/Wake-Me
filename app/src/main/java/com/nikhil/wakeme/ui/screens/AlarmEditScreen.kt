@@ -1,9 +1,15 @@
 package com.nikhil.wakeme.ui.screens
 
+import android.app.AlarmManager
 import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.widget.TimePicker
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -24,24 +30,60 @@ fun AlarmEditScreen(nav: NavController) {
     val context = LocalContext.current
     val repo = remember { AlarmRepository(context) }
     val scope = rememberCoroutineScope()
+    val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     var label by remember { mutableStateOf("Alarm") }
     var snooze by remember { mutableIntStateOf(5) }
     var autoSnoozeMax by remember { mutableIntStateOf(0) } // 0 unlimited
+    var showPermissionRationale by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    fun canScheduleExactAlarms(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            am.canScheduleExactAlarms()
+        } else {
+            true
+        }
+    }
+
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { showPermissionRationale = false },
+            title = { Text("Permission Required") },
+            text = { Text("To ensure alarms are delivered on time, please grant the 'Alarms & reminders' permission.") },
+            confirmButton = {
+                Button(onClick = {
+                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                    showPermissionRationale = false
+                }) {
+                    Text("Grant")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showPermissionRationale = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
         OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label") })
         Spacer(Modifier.height(8.dp))
         Row {
             Text("Snooze (min):")
             Spacer(Modifier.width(8.dp))
-            TextField(value = snooze.toString(), onValueChange = { snooze = it.toIntOrNull()?:5 }, modifier = Modifier.width(80.dp))
+            TextField(value = snooze.toString(), onValueChange = { snooze = it.toIntOrNull() ?: 5 }, modifier = Modifier.width(80.dp))
         }
         Spacer(Modifier.height(8.dp))
         Row {
             Text("Auto-snooze max cycles (0 = unlimited):")
             Spacer(Modifier.width(8.dp))
-            TextField(value = autoSnoozeMax.toString(), onValueChange = { autoSnoozeMax = it.toIntOrNull()?:0 }, modifier = Modifier.width(80.dp))
+            TextField(value = autoSnoozeMax.toString(), onValueChange = { autoSnoozeMax = it.toIntOrNull() ?: 0 }, modifier = Modifier.width(80.dp))
         }
         Spacer(Modifier.height(16.dp))
         Button(onClick = {
@@ -54,10 +96,14 @@ fun AlarmEditScreen(nav: NavController) {
                 val millis = cal.timeInMillis
                 scope.launch {
                     val a = AlarmEntity(timeMillis = millis, label = label, snoozeMinutes = snooze, autoSnoozeMaxCycles = autoSnoozeMax)
-                    val id = repo.insert(a)
-                    val saved = a.copy(id = id)
-                    AlarmScheduler.scheduleAlarm(context, saved)
-                    nav.navigateUp()
+                    if (canScheduleExactAlarms()) {
+                        val id = repo.insert(a)
+                        val saved = a.copy(id = id)
+                        AlarmScheduler.scheduleAlarm(context, saved)
+                        nav.navigateUp()
+                    } else {
+                        showPermissionRationale = true
+                    }
                 }
             }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
             tp.show()

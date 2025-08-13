@@ -1,5 +1,6 @@
 package com.nikhil.wakeme.alarms
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,7 @@ class AlarmActionReceiver : BroadcastReceiver() {
         const val ACTION_SNOOZE = "com.nikhil.wakeme.ACTION_SNOOZE"
     }
 
+    @SuppressLint("MissingPermission")
     override fun onReceive(context: Context, intent: Intent) {
         val alarmId = intent.getLongExtra(AlarmScheduler.EXTRA_ALARM_ID, -1L)
         val action = intent.action ?: return
@@ -37,6 +39,8 @@ class AlarmActionReceiver : BroadcastReceiver() {
                     alarm.timeMillis = System.currentTimeMillis() + snoozeMillis
                     alarm.autoSnoozeCount = 0 // reset counter on manual snooze
                     db.alarmDao().update(alarm)
+                    // This is safe because the alarm was already scheduled,
+                    // so the permission must have been granted.
                     AlarmScheduler.scheduleAlarm(context, alarm)
                     context.stopService(Intent(context, AlarmForegroundService::class.java).apply {
                         putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
