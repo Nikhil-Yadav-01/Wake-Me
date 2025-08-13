@@ -1,9 +1,12 @@
 package com.nikhil.wakeme
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.nikhil.wakeme.ui.screens.AlarmNavHost
 import com.nikhil.wakeme.ui.theme.WakeMeTheme
+import com.nikhil.wakeme.alarms.AlarmScheduler
 
 class MainActivity : ComponentActivity() {
 
@@ -25,14 +29,33 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val requestExactAlarmPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (AlarmScheduler.canScheduleExactAlarms(this)) {
+            Toast.makeText(this, "Exact alarm permission granted", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Exact alarm permission is required for alarms to work.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun askNotificationPermission() {
-        // This is only necessary for API level >= 33 (TIRAMISU)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
             ) {
-                // Directly ask for the permission
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    private fun checkAndRequestExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!AlarmScheduler.canScheduleExactAlarms(this)) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+                requestExactAlarmPermissionLauncher.launch(intent)
             }
         }
     }
@@ -40,6 +63,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         askNotificationPermission()
+        checkAndRequestExactAlarmPermission()
         enableEdgeToEdge()
         setContent {
             WakeMeTheme {

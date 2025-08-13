@@ -17,6 +17,11 @@ class BootReceiver : BroadcastReceiver() {
         if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             val appContext = context.applicationContext ?: return
 
+            if (!AlarmScheduler.canScheduleExactAlarms(appContext)) {
+                Log.w("BootReceiver", "Cannot reschedule alarms on boot: SCHEDULE_EXACT_ALARM permission not granted.")
+                return
+            }
+
             CoroutineScope(Dispatchers.IO).launch {
                 val db = AlarmDatabase.getInstance(appContext)
                 val alarms = db.alarmDao().getEnabledAlarmsList()
