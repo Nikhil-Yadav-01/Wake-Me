@@ -28,12 +28,14 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
 
     var alarm by remember { mutableStateOf<AlarmEntity?>(null) }
     var label by remember { mutableStateOf("") }
+    var snoozeDuration by remember { mutableStateOf(10f) }
     val timePickerState = rememberTimePickerState()
 
     LaunchedEffect(alarmId) {
         if (!isNewAlarm) {
             alarm = repo.getById(alarmId)
             label = alarm?.label ?: ""
+            snoozeDuration = alarm?.snoozeDuration?.toFloat() ?: 10f
             alarm?.let {
                 val cal = Calendar.getInstance().apply { timeInMillis = it.timeMillis }
                 timePickerState.hour = cal.get(Calendar.HOUR_OF_DAY)
@@ -65,10 +67,12 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
             val alarmToSave = alarm?.copy(
                 timeMillis = cal.timeInMillis,
                 label = label,
+                snoozeDuration = snoozeDuration.toInt(),
                 enabled = true
             ) ?: AlarmEntity(
                 timeMillis = cal.timeInMillis,
                 label = label,
+                snoozeDuration = snoozeDuration.toInt(),
                 enabled = true
             )
 
@@ -110,6 +114,14 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             TimePicker(state = timePickerState)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Snooze: ${snoozeDuration.toInt()} minutes")
+            Slider(
+                value = snoozeDuration,
+                onValueChange = { snoozeDuration = it },
+                valueRange = 5f..30f,
+                steps = 5
+            )
         }
     }
 }

@@ -25,7 +25,7 @@ class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(appl
     fun snoozeAlarm() {
         alarm.value?.let {
             val snoozedAlarm = it.copy(
-                timeMillis = System.currentTimeMillis() + 10 * 60 * 1000 // Snooze for 10 minutes
+                timeMillis = System.currentTimeMillis() + it.snoozeDuration * 60 * 1000
             )
             viewModelScope.launch {
                 db.alarmDao().update(snoozedAlarm)

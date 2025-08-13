@@ -10,58 +10,21 @@ data class AlarmEntity(
     var timeMillis: Long,
     var enabled: Boolean = true,
     var label: String? = null,
-    var toneUri: String? = null,
-    var vibrate: Boolean = true,
-    var repeatMask: Int = 0,
-    var snoozeMinutes: Int = 5,
-    var autoSnoozeEnabled: Boolean = true,
-    var autoSnoozeMaxCycles: Int = 0, // 0 = unlimited
-    var autoSnoozeCount: Int = 0,
+    var snoozeDuration: Int = 10, // in minutes
     var createdAt: Long = System.currentTimeMillis()
 ) {
     fun calculateNextTrigger(): Long {
         val now = Calendar.getInstance()
-        val alarmTime = Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.timeMillis }
-
-        if (repeatMask == 0) {
-            return timeMillis
+        val alarmTime = Calendar.getInstance().apply {
+            timeInMillis = this@AlarmEntity.timeMillis
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
 
-        // For repeating alarms
-        val days = booleanArrayOf(
-            (repeatMask and MONDAY) > 0,
-            (repeatMask and TUESDAY) > 0,
-            (repeatMask and WEDNESDAY) > 0,
-            (repeatMask and THURSDAY) > 0,
-            (repeatMask and FRIDAY) > 0,
-            (repeatMask and SATURDAY) > 0,
-            (repeatMask and SUNDAY) > 0
-        )
-
-        // Set alarm time to today
-        alarmTime.set(Calendar.YEAR, now.get(Calendar.YEAR))
-        alarmTime.set(Calendar.MONTH, now.get(Calendar.MONTH))
-        alarmTime.set(Calendar.DAY_OF_YEAR, now.get(Calendar.DAY_OF_YEAR))
-
-        // Find the next day it should ring
-        for (i in 0..7) {
-            val dayOfWeek = (now.get(Calendar.DAY_OF_WEEK) + i -1) % 7 // Calendar.SUNDAY is 1
-            if (days[dayOfWeek] && (alarmTime.after(now) || i > 0)) { // if it's today, make sure time hasn't passed
-                return alarmTime.timeInMillis
-            }
+        if (alarmTime.before(now)) {
             alarmTime.add(Calendar.DAY_OF_YEAR, 1)
         }
-        
-        return timeMillis // fallback
-    }
 
-    companion object {
-        const val MONDAY = 1
-        const val TUESDAY = 2
-        const val WEDNESDAY = 4
-        const val THURSDAY = 8
-        const val FRIDAY = 16
-        const val SATURDAY = 32
-        const val SUNDAY = 64
+        return alarmTime.timeInMillis
     }
 }

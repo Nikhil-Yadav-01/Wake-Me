@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nikhil.wakeme.ui.screens.AlarmNavHost
 import com.nikhil.wakeme.ui.theme.WakeMeTheme
 import com.nikhil.wakeme.alarms.AlarmScheduler
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installSplashScreen()
         askNotificationPermission()
         checkAndRequestExactAlarmPermission()
         enableEdgeToEdge()
