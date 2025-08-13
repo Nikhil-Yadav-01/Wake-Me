@@ -1,20 +1,13 @@
 package com.nikhil.wakeme.ui.screens
 
-import android.app.AlarmManager
-import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
-import android.widget.TimePicker
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -25,90 +18,98 @@ import com.nikhil.wakeme.alarms.AlarmScheduler
 import kotlinx.coroutines.launch
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlarmEditScreen(nav: NavController) {
+fun AlarmEditScreen(navController: NavController, alarmId: Long) {
     val context = LocalContext.current
     val repo = remember { AlarmRepository(context) }
     val scope = rememberCoroutineScope()
-    val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    val isNewAlarm = alarmId == 0L
 
-    var label by remember { mutableStateOf("Alarm") }
-    var snooze by remember { mutableIntStateOf(5) }
-    var autoSnoozeMax by remember { mutableIntStateOf(0) } // 0 unlimited
-    var showPermissionRationale by remember { mutableStateOf(false) }
+    var alarm by remember { mutableStateOf<AlarmEntity?>(null) }
+    var label by remember { mutableStateOf("") }
+    val timePickerState = rememberTimePickerState()
 
-    fun canScheduleExactAlarms(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            am.canScheduleExactAlarms()
-        } else {
-            true
-        }
-    }
-
-    if (showPermissionRationale) {
-        AlertDialog(
-            onDismissRequest = { showPermissionRationale = false },
-            title = { Text("Permission Required") },
-            text = { Text("To ensure alarms are delivered on time, please grant the 'Alarms & reminders' permission.") },
-            confirmButton = {
-                Button(onClick = {
-                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
-                    }
-                    context.startActivity(intent)
-                    showPermissionRationale = false
-                }) {
-                    Text("Grant")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showPermissionRationale = false }) {
-                    Text("Cancel")
-                }
+    LaunchedEffect(alarmId) {
+        if (!isNewAlarm) {
+            alarm = repo.getById(alarmId)
+            label = alarm?.label ?: ""
+            alarm?.let {
+                val cal = Calendar.getInstance().apply { timeInMillis = it.timeMillis }
+                timePickerState.hour = cal.get(Calendar.HOUR_OF_DAY)
+                timePickerState.minute = cal.get(Calendar.MINUTE)
             }
-        )
+        }
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
-        OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label") })
-        Spacer(Modifier.height(8.dp))
-        Row {
-            Text("Snooze (min):")
-            Spacer(Modifier.width(8.dp))
-            TextField(value = snooze.toString(), onValueChange = { snooze = it.toIntOrNull() ?: 5 }, modifier = Modifier.width(80.dp))
+    fun saveAlarm() {
+        if (!AlarmScheduler.canScheduleExactAlarms(context)) {
+            // Show rationale and request permission
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            }
+            context.startActivity(intent)
+            return
         }
-        Spacer(Modifier.height(8.dp))
-        Row {
-            Text("Auto-snooze max cycles (0 = unlimited):")
-            Spacer(Modifier.width(8.dp))
-            TextField(value = autoSnoozeMax.toString(), onValueChange = { autoSnoozeMax = it.toIntOrNull() ?: 0 }, modifier = Modifier.width(80.dp))
+
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+            set(Calendar.MINUTE, timePickerState.minute)
+            set(Calendar.SECOND, 0)
+            if (timeInMillis < System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = {
-            // pick time and create alarm
-            val cal = Calendar.getInstance()
-            val tp = TimePickerDialog(context, { _: TimePicker, h: Int, m: Int ->
-                cal.set(Calendar.HOUR_OF_DAY, h)
-                cal.set(Calendar.MINUTE, m)
-                cal.set(Calendar.SECOND, 0)
-                val millis = cal.timeInMillis
-                scope.launch {
-                    val a = AlarmEntity(timeMillis = millis, label = label, snoozeMinutes = snooze, autoSnoozeMaxCycles = autoSnoozeMax)
-                    if (canScheduleExactAlarms()) {
-                        val id = repo.insert(a)
-                        val saved = a.copy(id = id)
-                        AlarmScheduler.scheduleAlarm(context, saved)
-                        nav.navigateUp()
-                    } else {
-                        showPermissionRationale = true
+
+        scope.launch {
+            val alarmToSave = alarm?.copy(
+                timeMillis = cal.timeInMillis,
+                label = label,
+                enabled = true
+            ) ?: AlarmEntity(
+                timeMillis = cal.timeInMillis,
+                label = label,
+                enabled = true
+            )
+
+            val id = if (isNewAlarm) repo.insert(alarmToSave) else {
+                repo.update(alarmToSave)
+                alarmToSave.id
+            }
+
+            val finalAlarm = alarmToSave.copy(id = id)
+            AlarmScheduler.scheduleAlarm(context, finalAlarm)
+            navController.popBackStack()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm") },
+                actions = {
+                    TextButton(onClick = { saveAlarm() }) {
+                        Text("Save")
                     }
                 }
-            }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
-            tp.show()
-        }) {
-            Text("Set Time")
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            OutlinedTextField(
+                value = label,
+                onValueChange = { label = it },
+                label = { Text("Alarm Label") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            TimePicker(state = timePickerState)
         }
     }
 }
