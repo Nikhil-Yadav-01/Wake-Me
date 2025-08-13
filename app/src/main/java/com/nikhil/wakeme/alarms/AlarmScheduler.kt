@@ -1,61 +1,44 @@
 package com.nikhil.wakeme.alarms
 
-import android.Manifest
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.os.Build
-import android.util.Log
-import androidx.annotation.RequiresPermission
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.nikhil.wakeme.data.AlarmEntity
+import java.util.concurrent.TimeUnit
 
 object AlarmScheduler {
     const val EXTRA_ALARM_ID = "EXTRA_ALARM_ID"
-    private const val TAG = "AlarmScheduler"
+    private const val ALARM_WORK_TAG_PREFIX = "alarm_work_"
 
-    private fun getImmutableFlag(): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
-    }
-
-    private fun canScheduleExactAlarms(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            return am.canScheduleExactAlarms()
-        }
-        return true
-    }
-
-    @RequiresPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
     fun scheduleAlarm(context: Context, alarm: AlarmEntity) {
         if (!alarm.enabled) return
-        if (!canScheduleExactAlarms(context)) {
-            Log.w(TAG, "Cannot schedule exact alarm, permission not granted.")
-            return
-        }
 
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra(EXTRA_ALARM_ID, alarm.id)
-        }
-        val pi = PendingIntent.getBroadcast(context, alarm.id.toInt(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or getImmutableFlag()
-        )
-        val triggerAt = alarm.timeMillis
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-        } else {
-            am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-        }
+        val workManager = WorkManager.getInstance(context)
+        val workTag = "$ALARM_WORK_TAG_PREFIX${alarm.id}"
+
+        // Cancel any existing work for this alarm
+        workManager.cancelAllWorkByTag(workTag)
+
+        val alarmData = Data.Builder()
+            .putLong(EXTRA_ALARM_ID, alarm.id)
+            .build()
+
+        val delay = alarm.timeMillis - System.currentTimeMillis()
+        if (delay < 0) return 
+
+        val workRequest = OneTimeWorkRequestBuilder<AlarmWorker>()
+            .setInputData(alarmData)
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+            .addTag(workTag)
+            .build()
+
+        workManager.enqueue(workRequest)
     }
 
     fun cancelAlarm(context: Context, alarmId: Long) {
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java)
-        val pi = PendingIntent.getBroadcast(context, alarmId.toInt(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or getImmutableFlag()
-        )
-        am.cancel(pi)
-        pi.cancel()
+        val workManager = WorkManager.getInstance(context)
+        val workTag = "$ALARM_WORK_TAG_PREFIX$alarmId"
+        workManager.cancelAllWorkByTag(workTag)
     }
 }

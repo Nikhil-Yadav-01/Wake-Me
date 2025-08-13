@@ -3,6 +3,7 @@ package com.nikhil.wakeme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -11,46 +12,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.nikhil.wakeme.alarms.AlarmActionReceiver
-import com.nikhil.wakeme.alarms.AlarmScheduler
-import android.content.Intent
 import kotlin.random.Random
 
 class AlarmFullScreenActivity : ComponentActivity() {
-    private var alarmId: Long = -1L
+    private val viewModel: AlarmFullScreenViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        alarmId = intent.getLongExtra(AlarmScheduler.EXTRA_ALARM_ID, -1L)
+        val alarmId = intent.getLongExtra("ALARM_ID", -1L)
+        if (alarmId != -1L) {
+            viewModel.loadAlarm(alarmId)
+        }
+
         setShowWhenLocked(true)
         setTurnScreenOn(true)
+
         setContent {
-            FullScreenAlarmUI(
-                label = "Alarm",
-                onStop = { stopAlarm() },
-                onSnooze = { snoozeAlarm() }
-            )
+            val alarm by viewModel.alarm.collectAsState()
+            alarm?.let {
+                FullScreenAlarmUI(
+                    label = it.label ?: "Alarm",
+                    onStop = {
+                        viewModel.stopAlarm()
+                        finish()
+                    },
+                    onSnooze = {
+                        viewModel.snoozeAlarm()
+                        finish()
+                    }
+                )
+            }
         }
     }
-
-    private fun stopAlarm() {
-        val stopIntent = Intent(this, AlarmActionReceiver::class.java).apply {
-            action = AlarmActionReceiver.ACTION_STOP // Corrected line
-            putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
-        }
-        sendBroadcast(stopIntent)
-        finish()
-    }
-
-    private fun snoozeAlarm() {
-        val snoozeIntent = Intent(this, AlarmActionReceiver::class.java).apply {
-            action = AlarmActionReceiver.ACTION_SNOOZE // Corrected line
-            putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
-        }
-        sendBroadcast(snoozeIntent)
-        finish()
-    }
-
 }
 
 @Composable

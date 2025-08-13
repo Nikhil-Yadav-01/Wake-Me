@@ -2,14 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +15,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android.theme="@style/Theme.WakeMe">
+        android:theme="@style/Theme.WakeMe">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -33,12 +29,6 @@
         </activity>
 
         <receiver
-            android:name=".alarms.AlarmReceiver"
-            android:exported="false" />
-        <receiver
-            android:name=".alarms.AlarmActionReceiver"
-            android:exported="false" />
-        <receiver
             android:name=".alarms.BootReceiver"
             android:exported="true">
             <intent-filter>
@@ -47,10 +37,6 @@
             </intent-filter>
         </receiver>
 
-        <service
-            android:name=".alarms.AlarmForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
     </application>
 
 </manifest>
