@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmListScreen(nav: NavController) {
     val context = LocalContext.current
