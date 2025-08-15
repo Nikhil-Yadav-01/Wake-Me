@@ -25,8 +25,29 @@ object AlarmScheduler {
         }
     }
 
+    private fun cancelExistingAlarmTriggers(context: Context, alarmId: Long) {
+        val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra(EXTRA_ALARM_ID, alarmId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            alarmId.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager?.cancel(pendingIntent)
+
+        val workManager = WorkManager.getInstance(context)
+        val workTag = "$ALARM_WORK_TAG_PREFIX$alarmId"
+        workManager.cancelAllWorkByTag(workTag)
+    }
+
     fun scheduleAlarm(context: Context, alarm: AlarmEntity) {
         if (!alarm.enabled) return
+
+        // Always cancel existing triggers for this alarm ID before re-scheduling
+        cancelExistingAlarmTriggers(context, alarm.id)
 
         val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
         val intent = Intent(context, AlarmReceiver::class.java).apply {
@@ -44,7 +65,6 @@ object AlarmScheduler {
                 alarmManager?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.timeMillis, pendingIntent)
             } else {
                 // Fallback for devices where exact alarms cannot be scheduled (e.g., permission not granted)
-                // In this case, we'll still try to use WorkManager, but it might not be as reliable.
                 scheduleAlarmWithWorkManager(context, alarm)
             }
         } else {
@@ -56,7 +76,7 @@ object AlarmScheduler {
         val workManager = WorkManager.getInstance(context)
         val workTag = "$ALARM_WORK_TAG_PREFIX${alarm.id}"
 
-        workManager.cancelAllWorkByTag(workTag)
+        // No need to cancel WorkManager tasks here as cancelExistingAlarmTriggers is called in scheduleAlarm
 
         val alarmData = Data.Builder()
             .putLong(EXTRA_ALARM_ID, alarm.id)
@@ -75,20 +95,6 @@ object AlarmScheduler {
     }
 
     fun cancelAlarm(context: Context, alarmId: Long) {
-        val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra(EXTRA_ALARM_ID, alarmId)
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            alarmId.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager?.cancel(pendingIntent)
-
-        val workManager = WorkManager.getInstance(context)
-        val workTag = "$ALARM_WORK_TAG_PREFIX$alarmId"
-        workManager.cancelAllWorkByTag(workTag)
+        cancelExistingAlarmTriggers(context, alarmId) // Use the comprehensive cancellation helper
     }
 }
