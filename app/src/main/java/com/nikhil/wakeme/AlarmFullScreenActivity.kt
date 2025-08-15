@@ -72,8 +72,8 @@ fun FullScreenAlarmUI(label: String, onStop: () -> Unit, onSnooze: () -> Unit) {
         Image(
             painter = painterResource(R.drawable.alarm_trigger_bg),
             contentDescription = "Background",
+            contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds
         )
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
