@@ -40,6 +40,8 @@ import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import com.nikhil.wakeme.ui.theme.Orbitron // Import Orbitron font family
+import androidx.compose.material3.MaterialTheme // Import MaterialTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,10 +115,10 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm") },
+                title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm", style = MaterialTheme.typography.titleLarge, fontFamily = Orbitron) },
                 actions = {
                     TextButton(onClick = { saveAlarm() }) {
-                        Text("Save")
+                        Text("Save", fontFamily = Orbitron) // Apply Orbitron font
                     }
                 }
             )
@@ -141,16 +143,18 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Alarm Label") },
+                    label = { Text("Alarm Label", fontFamily = Orbitron) }, // Apply Orbitron font to label
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // TimePicker internally uses its own text styles, applying fontFamily directly might not work for all its sub-components.
+                // However, the overall theme's typography will influence it.
                 TimePicker(state = timePickerState)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Snooze: ${snoozeDuration.toInt()} minutes")
+                Text("Snooze: ${snoozeDuration.toInt()} minutes", fontFamily = Orbitron) // Apply Orbitron font
 
                 Slider(
                     value = snoozeDuration,

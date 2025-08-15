@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,6 +70,9 @@ fun AlarmListScreen(nav: NavController) {
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Wake Me", style = MaterialTheme.typography.titleLarge) })
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { nav.navigate("edit/0") },
@@ -122,7 +126,7 @@ fun AlarmListScreen(nav: NavController) {
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(onClick = { requestExactAlarmPermission() }) {
-                                Text("Grant Permission")
+                                Text("Grant Permission", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }

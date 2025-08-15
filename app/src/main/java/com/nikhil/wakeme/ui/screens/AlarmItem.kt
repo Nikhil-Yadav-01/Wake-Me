@@ -25,6 +25,8 @@ import com.nikhil.wakeme.data.AlarmEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.nikhil.wakeme.R // Import R for drawables
+import com.nikhil.wakeme.ui.theme.Orbitron // Import Orbitron font family
 
 @Composable
 fun AlarmItem(
@@ -43,7 +45,7 @@ fun AlarmItem(
     ) {
         Box {
             Image(
-                painter = painterResource(com.nikhil.wakeme.R.drawable.bg),
+                painter = painterResource(R.drawable.bg),
                 contentDescription = "Home background",
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
@@ -61,11 +63,13 @@ fun AlarmItem(
                     val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
                     Text(
                         text = timeFormat.format(Date(alarm.timeMillis)),
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontFamily = Orbitron // Apply Orbitron font
                     )
                     Text(
                         text = alarm.label ?: "Alarm",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = Orbitron // Apply Orbitron font
                     )
                 }
                 Switch(

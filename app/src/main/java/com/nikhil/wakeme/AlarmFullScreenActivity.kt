@@ -15,6 +15,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.nikhil.wakeme.ui.theme.Orbitron // Import Orbitron font family
 import kotlin.random.Random
 
 class AlarmFullScreenActivity : ComponentActivity() {
@@ -79,21 +80,24 @@ fun FullScreenAlarmUI(label: String, onStop: () -> Unit, onSnooze: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.titleLarge, // Using titleLarge
+                fontFamily = Orbitron // Explicitly applying font family
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
                 text = "To stop the alarm, solve this math problem:",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyLarge, // Using bodyLarge
+                fontFamily = Orbitron // Explicitly applying font family
             )
 
             Spacer(Modifier.height(8.dp))
 
             Text(
                 text = "$a × $b = ?",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineLarge, // Using headlineLarge
+                fontFamily = Orbitron // Explicitly applying font family
             )
 
             Spacer(Modifier.height(16.dp))
@@ -101,7 +105,7 @@ fun FullScreenAlarmUI(label: String, onStop: () -> Unit, onSnooze: () -> Unit) {
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                label = { Text("Enter your answer") }
+                label = { Text("Enter your answer", fontFamily = Orbitron) } // Applying font to label
             )
 
             Spacer(Modifier.height(12.dp))
@@ -120,10 +124,10 @@ fun FullScreenAlarmUI(label: String, onStop: () -> Unit, onSnooze: () -> Unit) {
                     },
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    Text("Submit")
+                    Text("Submit", fontFamily = Orbitron) // Applying font to button text
                 }
                 Button(onClick = onSnooze, modifier = Modifier.padding(8.dp)) {
-                    Text("Snooze")
+                    Text("Snooze", fontFamily = Orbitron) // Applying font to button text
                 }
             }
         }
