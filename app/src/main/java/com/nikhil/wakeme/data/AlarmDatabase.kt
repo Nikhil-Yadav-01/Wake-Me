@@ -18,7 +18,7 @@ abstract class AlarmDatabase : RoomDatabase() {
                 val inst = Room.databaseBuilder(
                     context.applicationContext,
                     AlarmDatabase::class.java,
-                    "alarm_db"
+                    "wake_me_alarm_db"
                 ).build()
                 INSTANCE = inst
                 inst
