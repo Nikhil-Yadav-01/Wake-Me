@@ -63,9 +63,9 @@ object NotificationHelper {
             .setContentText("Time to wake up!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(true)
+            .setAutoCancel(false) // Changed to false so notification doesn't disappear on interaction
             .setFullScreenIntent(fullScreenPendingIntent, true)
-            .setContentIntent(fullScreenPendingIntent) // Added this line to handle taps on the notification body
+            .setContentIntent(fullScreenPendingIntent) 
             .setOngoing(true)
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
