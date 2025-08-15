@@ -23,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -43,6 +44,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
@@ -50,7 +52,6 @@ import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
 import kotlinx.coroutines.launch
 import java.util.Calendar
-import androidx.core.net.toUri
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -192,12 +193,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
-                OutlinedTextField(
-                    value = ringtoneTitle,
-                    onValueChange = { /* Read-only field */ },
-                    label = { Text("Ringtone") },
-                    readOnly = true,
-                    leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = "Ringtone") },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
@@ -212,7 +208,23 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                             }
                             ringtonePickerLauncher.launch(intent)
                         }
-                )
+                ) {
+                    OutlinedTextField(
+                        value = ringtoneTitle,
+                        onValueChange = { /* This will not be called */ },
+                        label = { Text("Ringtone") },
+                        enabled = false, // Set to false to allow clicks on the parent Box
+                        leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = "Ringtone") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
             }
         }
     }
