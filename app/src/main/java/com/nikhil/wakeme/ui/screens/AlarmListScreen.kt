@@ -138,7 +138,7 @@ fun AlarmListScreen(nav: NavController) {
                     ) {
                         Text(
                             "No alarms set.",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.headlineLarge,
                             textAlign = TextAlign.Center
                         )
                     }
