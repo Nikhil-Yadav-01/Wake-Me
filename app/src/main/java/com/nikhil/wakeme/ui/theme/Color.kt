@@ -2,10 +2,23 @@ package com.nikhil.wakeme.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Neon core palette
+val NeonGreen = Color(0xFF39FF14)      // Primary neon green
+val NeonBlue = Color(0xFF00E5FF)       // Accent cyan-blue
+val NeonPurple = Color(0xFF9D00FF)     // Secondary futuristic purple
+val NeonPink = Color(0xFFFF00E5)       // Alarm accent pink
+val NeonOrange = Color(0xFFFF6F00)     // Warm alert orange
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Background gradients
+val DarkSpace = Color(0xFF0A0A0A)      // Main background black
+val DeepGray = Color(0xFF1A1A1A)       // Secondary gray background
+val ElectricGlow = Color(0xFF00FFAA)   // Glow effect color
+
+// Text colors
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFB0B0B0)
+
+// Alarm specific
+val AlarmActive = Color(0xFFFF1744)    // Active alarm red
+val AlarmIdle = Color(0xFF00E676)      // Idle alarm green
+val AlarmSnooze = Color(0xFFFFD600)    // Snooze yellow
