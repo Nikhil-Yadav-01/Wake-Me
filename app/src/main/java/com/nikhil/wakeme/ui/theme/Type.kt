@@ -11,13 +11,11 @@ import com.nikhil.wakeme.R
 
 val Orbitron = FontFamily(
     Font(R.font.orbitron_regular, FontWeight.Normal),
-    Font(R.font.orbitron_bold, FontWeight.Bold)
-    // If you add more font files like orbitron-medium.ttf, add them here:
-    // Font(R.font.orbitron_medium, FontWeight.Medium)
+    Font(R.font.orbitron_bold, FontWeight.Bold),
+     Font(R.font.orbitron_medium, FontWeight.Medium)
 )
 
 val Typography = Typography(
-    // Display styles (largest text)
     displayLarge = TextStyle(
         fontFamily = Orbitron,
         fontWeight = FontWeight.Bold,
