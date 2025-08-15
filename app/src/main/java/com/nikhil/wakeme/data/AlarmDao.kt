@@ -9,10 +9,10 @@ interface AlarmDao {
     suspend fun insert(alarm: AlarmEntity): Long
 
     @Update
-    suspend fun update(alarm: AlarmEntity)
+    suspend fun update(alarm: AlarmEntity): Int
 
     @Delete
-    suspend fun delete(alarm: AlarmEntity)
+    suspend fun delete(alarm: AlarmEntity): Int
 
     @Query("SELECT * FROM alarms WHERE enabled = 1 ORDER BY timeMillis")
     fun getEnabledAlarmsFlow(): Flow<List<AlarmEntity>>
