@@ -4,14 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.nikhil.wakeme.R // Import your R file for drawable resources
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.alarms.AlarmScheduler
@@ -87,41 +91,50 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm") },
-                actions = {
-                    TextButton(onClick = { saveAlarm() }) {
-                        Text("Save")
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.set_alarm_bg),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm") },
+                    actions = {
+                        TextButton(onClick = { saveAlarm() }) {
+                            Text("Save")
+                        }
                     }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            OutlinedTextField(
-                value = label,
-                onValueChange = { label = it },
-                label = { Text("Alarm Label") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            TimePicker(state = timePickerState)
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("Snooze: ${snoozeDuration.toInt()} minutes")
-            Slider(
-                value = snoozeDuration,
-                onValueChange = { snoozeDuration = it },
-                valueRange = 5f..30f,
-                steps = 5
-            )
+                )
+            },
+            containerColor = androidx.compose.ui.graphics.Color.Transparent // Make Scaffold background transparent
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    label = { Text("Alarm Label") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                TimePicker(state = timePickerState)
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Snooze: ${snoozeDuration.toInt()} minutes")
+                Slider(
+                    value = snoozeDuration,
+                    onValueChange = { snoozeDuration = it },
+                    valueRange = 5f..30f,
+                    steps = 5
+                )
+            }
         }
     }
 }

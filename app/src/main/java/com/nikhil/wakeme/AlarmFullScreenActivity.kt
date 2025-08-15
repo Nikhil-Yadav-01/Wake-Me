@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -11,6 +12,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
 
@@ -29,18 +32,26 @@ class AlarmFullScreenActivity : ComponentActivity() {
 
         setContent {
             val alarm by viewModel.alarm.collectAsState()
-            alarm?.let {
-                FullScreenAlarmUI(
-                    label = it.label ?: "Alarm",
-                    onStop = {
-                        viewModel.stopAlarm()
-                        finish()
-                    },
-                    onSnooze = {
-                        viewModel.snoozeAlarm()
-                        finish()
-                    }
+            Box(modifier = Modifier.fillMaxSize()) {
+                Image(
+                    painter = painterResource(id = R.drawable.alarm_trigger_bg),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
+                alarm?.let {
+                    FullScreenAlarmUI(
+                        label = it.label ?: "Alarm",
+                        onStop = {
+                            viewModel.stopAlarm()
+                            finish()
+                        },
+                        onSnooze = {
+                            viewModel.snoozeAlarm()
+                            finish()
+                        }
+                    )
+                }
             }
         }
     }
