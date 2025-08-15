@@ -26,7 +26,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import com.nikhil.wakeme.R // Import R for drawables
-import com.nikhil.wakeme.ui.theme.Orbitron // Import Orbitron font family
 
 @Composable
 fun AlarmItem(
@@ -63,13 +62,11 @@ fun AlarmItem(
                     val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
                     Text(
                         text = timeFormat.format(Date(alarm.timeMillis)),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontFamily = Orbitron // Apply Orbitron font
+                        style = MaterialTheme.typography.headlineMedium
                     )
                     Text(
                         text = alarm.label ?: "Alarm",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = Orbitron // Apply Orbitron font
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 Switch(

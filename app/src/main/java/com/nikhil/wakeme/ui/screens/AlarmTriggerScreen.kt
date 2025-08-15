@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.nikhil.wakeme.R
-import com.nikhil.wakeme.ui.theme.Orbitron
 import kotlin.random.Random
 
 @Composable
@@ -50,24 +49,21 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleLarge,
-                fontFamily = Orbitron
+                style = MaterialTheme.typography.titleLarge
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
                 text = "To stop the alarm, solve this math problem:",
-                style = MaterialTheme.typography.bodyLarge,
-                fontFamily = Orbitron
+                style = MaterialTheme.typography.bodyLarge
             )
 
             Spacer(Modifier.height(8.dp))
 
             Text(
                 text = "$a × $b = ?",
-                style = MaterialTheme.typography.headlineLarge, // Using headlineLarge
-                fontFamily = Orbitron // Explicitly applying font family
+                style = MaterialTheme.typography.headlineLarge
             )
 
             Spacer(Modifier.height(16.dp))
@@ -75,7 +71,7 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                label = { Text("Enter your answer", fontFamily = Orbitron) } // Applying font to label
+                label = { Text("Enter your answer") }
             )
 
             Spacer(Modifier.height(12.dp))
@@ -94,10 +90,10 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
                     },
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    Text("Submit", fontFamily = Orbitron)
+                    Text("Submit")
                 }
                 Button(onClick = onSnooze, modifier = Modifier.padding(8.dp)) {
-                    Text("Snooze", fontFamily = Orbitron)
+                    Text("Snooze")
                 }
             }
         }

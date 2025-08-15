@@ -23,33 +23,28 @@ object NotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // Always recreate the channel if the sound URI changes, or if it doesn't exist
-            val existingChannel = notificationManager.getNotificationChannel(CHANNEL_ID)
-            val currentSoundUri = existingChannel?.sound
-
             val soundUriToUse = alarmSoundUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
 
-            if (existingChannel == null || currentSoundUri != soundUriToUse) {
-                // Delete existing channel if sound needs to change or channel needs re-creation
-                existingChannel?.let { notificationManager.deleteNotificationChannel(CHANNEL_ID) }
+            // Always delete and recreate the channel to ensure the sound is updated correctly
+            // This is a robust way to handle channel property changes, especially sound.
+            notificationManager.deleteNotificationChannel(CHANNEL_ID)
 
-                val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
-                val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Channel for alarm notifications"
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 500, 500, 500)
-                    setSound(soundUriToUse, audioAttributes)
-                }
-                notificationManager.createNotificationChannel(channel)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Channel for alarm notifications"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 500, 500)
+                setSound(soundUriToUse, audioAttributes)
             }
+            notificationManager.createNotificationChannel(channel)
         }
     }
 

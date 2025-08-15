@@ -48,7 +48,6 @@ import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.ui.theme.Orbitron
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import androidx.core.net.toUri
@@ -146,10 +145,10 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm", style = MaterialTheme.typography.titleLarge, fontFamily = Orbitron) },
+                title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm", style = MaterialTheme.typography.titleLarge) },
                 actions = {
                     TextButton(onClick = { saveAlarm() }) {
-                        Text("Save", fontFamily = Orbitron)
+                        Text("Save")
                     }
                 }
             )
@@ -173,7 +172,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Alarm Label", fontFamily = Orbitron) },
+                    label = { Text("Alarm Label") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -183,7 +182,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Snooze: ${snoozeDuration.toInt()} minutes", fontFamily = Orbitron)
+                Text("Snooze: ${snoozeDuration.toInt()} minutes")
 
                 Slider(
                     value = snoozeDuration,
@@ -196,7 +195,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 OutlinedTextField(
                     value = ringtoneTitle,
                     onValueChange = { /* Read-only field */ },
-                    label = { Text("Ringtone", fontFamily = Orbitron) },
+                    label = { Text("Ringtone") },
                     readOnly = true,
                     leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = "Ringtone") },
                     modifier = Modifier
