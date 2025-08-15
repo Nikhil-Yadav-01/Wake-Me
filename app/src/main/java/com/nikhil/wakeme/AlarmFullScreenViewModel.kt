@@ -29,7 +29,8 @@ class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(appl
             NotificationHelper.cancelNotification(getApplication(), it.id.toInt())
 
             val snoozedAlarm = it.copy(
-                timeMillis = System.currentTimeMillis() + it.snoozeDuration * 60 * 1000
+                timeMillis = System.currentTimeMillis() + it.snoozeDuration * 60 * 1000,
+                enabled = true // Ensure the alarm is enabled when snoozed
             )
             viewModelScope.launch {
                 db.alarmDao().update(snoozedAlarm)
