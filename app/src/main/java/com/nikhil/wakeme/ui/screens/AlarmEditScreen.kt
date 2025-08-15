@@ -3,9 +3,11 @@ package com.nikhil.wakeme.ui.screens
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -49,7 +51,9 @@ import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.ui.theme.Orbitron
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import androidx.core.net.toUri
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmEditScreen(navController: NavController, alarmId: Long) {
@@ -70,7 +74,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val uri = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            val uri = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
             selectedRingtoneUri = uri
             ringtoneTitle = uri?.let {
                 RingtoneManager.getRingtone(context, it)?.getTitle(context)
@@ -88,7 +92,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 timePickerState.hour = cal.get(Calendar.HOUR_OF_DAY)
                 timePickerState.minute = cal.get(Calendar.MINUTE)
                 it.ringtoneUri?.let { uriString ->
-                    selectedRingtoneUri = Uri.parse(uriString)
+                    selectedRingtoneUri = uriString.toUri()
                     ringtoneTitle = RingtoneManager.getRingtone(context, selectedRingtoneUri)?.getTitle(context) ?: "Default Ringtone"
                 }
             }

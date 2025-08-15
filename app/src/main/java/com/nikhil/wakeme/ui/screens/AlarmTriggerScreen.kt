@@ -50,16 +50,16 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleLarge, // Using titleLarge
-                fontFamily = Orbitron // Explicitly applying font family
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = Orbitron
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
                 text = "To stop the alarm, solve this math problem:",
-                style = MaterialTheme.typography.bodyLarge, // Using bodyLarge
-                fontFamily = Orbitron // Explicitly applying font family
+                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = Orbitron
             )
 
             Spacer(Modifier.height(8.dp))
@@ -94,10 +94,10 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
                     },
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    Text("Submit", fontFamily = Orbitron) // Applying font to button text
+                    Text("Submit", fontFamily = Orbitron)
                 }
                 Button(onClick = onSnooze, modifier = Modifier.padding(8.dp)) {
-                    Text("Snooze", fontFamily = Orbitron) // Applying font to button text
+                    Text("Snooze", fontFamily = Orbitron)
                 }
             }
         }
