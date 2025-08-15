@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.data.AlarmDatabase
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.alarms.AlarmScheduler
+import com.nikhil.wakeme.util.NotificationHelper // Import NotificationHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -24,6 +25,9 @@ class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(appl
 
     fun snoozeAlarm() {
         alarm.value?.let {
+            // Cancel current notification when snoozing
+            NotificationHelper.cancelNotification(getApplication(), it.id.toInt())
+
             val snoozedAlarm = it.copy(
                 timeMillis = System.currentTimeMillis() + it.snoozeDuration * 60 * 1000
             )
@@ -36,6 +40,9 @@ class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(appl
 
     fun stopAlarm() {
         alarm.value?.let {
+            // Cancel current notification when stopping the alarm
+            NotificationHelper.cancelNotification(getApplication(), it.id.toInt())
+
             val updatedAlarm = it.copy(enabled = false)
             viewModelScope.launch {
                 db.alarmDao().update(updatedAlarm)
