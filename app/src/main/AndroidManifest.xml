@@ -30,6 +30,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".AlarmFullScreenActivity"
+            android:exported="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true" />
+
         <receiver
             android:name=".alarms.BootReceiver"
             android:exported="true">
@@ -38,6 +44,10 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".alarms.AlarmReceiver"
+            android:exported="false" />
 
     </application>
 

@@ -1,7 +1,10 @@
 package com.nikhil.wakeme.alarms
 
 import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
@@ -11,11 +14,11 @@ import java.util.concurrent.TimeUnit
 
 object AlarmScheduler {
     const val EXTRA_ALARM_ID = "EXTRA_ALARM_ID"
-    private const val ALARM_WORK_TAG_PREFIX = "alarm_work_"
+    const val ALARM_WORK_TAG_PREFIX = "alarm_work_"
 
     fun canScheduleExactAlarms(context: Context): Boolean {
         val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             alarmManager?.canScheduleExactAlarms() == true
         } else {
             true
@@ -25,15 +28,34 @@ object AlarmScheduler {
     fun scheduleAlarm(context: Context, alarm: AlarmEntity) {
         if (!alarm.enabled) return
 
-        if (!canScheduleExactAlarms(context)) {
-            // Handle cases where the permission is not granted
-            return
+        val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra(EXTRA_ALARM_ID, alarm.id)
         }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            alarm.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (canScheduleExactAlarms(context)) {
+                alarmManager?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.timeMillis, pendingIntent)
+            } else {
+                // Fallback for devices where exact alarms cannot be scheduled (e.g., permission not granted)
+                // In this case, we'll still try to use WorkManager, but it might not be as reliable.
+                scheduleAlarmWithWorkManager(context, alarm)
+            }
+        } else {
+            alarmManager?.setExact(AlarmManager.RTC_WAKEUP, alarm.timeMillis, pendingIntent)
+        }
+    }
+
+    fun scheduleAlarmWithWorkManager(context: Context, alarm: AlarmEntity) {
         val workManager = WorkManager.getInstance(context)
         val workTag = "$ALARM_WORK_TAG_PREFIX${alarm.id}"
 
-        // Cancel any existing work for this alarm
         workManager.cancelAllWorkByTag(workTag)
 
         val alarmData = Data.Builder()
@@ -53,6 +75,18 @@ object AlarmScheduler {
     }
 
     fun cancelAlarm(context: Context, alarmId: Long) {
+        val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra(EXTRA_ALARM_ID, alarmId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            alarmId.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager?.cancel(pendingIntent)
+
         val workManager = WorkManager.getInstance(context)
         val workTag = "$ALARM_WORK_TAG_PREFIX$alarmId"
         workManager.cancelAllWorkByTag(workTag)
