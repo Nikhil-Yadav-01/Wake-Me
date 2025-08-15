@@ -1,0 +1,55 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Outer ring with depth -->
+    <path
+        android:name="outer_ring"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"
+        android:strokeWidth="1.6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear"
+                android:startX="4" android:startY="4"
+                android:endX="20" android:endY="20">
+                <item android:offset="0" android:color="#FF00FFA2"/> <!-- neon green -->
+                <item android:offset="0.5" android:color="#FF00E5FF"/> <!-- cyan -->
+                <item android:offset="1" android:color="#FFFF4D8D"/> <!-- pink -->
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Pulse arc (to animate) -->
+    <path
+        android:name="pulse_arc"
+        android:pathData="M12,7.5 C9.52,7.5 7.5,9.52 7.5,12s2.02,4.5 4.5,4.5 4.5,-2.02 4.5,-4.5 -2.02,-4.5 -4.5,-4.5z"
+        android:fillColor="#00000000"
+        android:strokeWidth="1.4">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear"
+                android:startX="8" android:startY="8"
+                android:endX="16" android:endY="16">
+                <item android:offset="0" android:color="#FF00E5FF"/> <!-- cyan -->
+                <item android:offset="1" android:color="#FFFF9900"/> <!-- orange -->
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Clock hands (rotate these) -->
+    <path
+        android:name="minute_hand"
+        android:pathData="M12,12 L12,8.25"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFFFF"/>
+    <path
+        android:name="hour_hand"
+        android:pathData="M12,12 L15.25,12"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFFFF"/>
+</vector>
