@@ -12,6 +12,7 @@ data class AlarmEntity(
     var label: String? = null,
     var snoozeDuration: Int = 10, // in minutes
     var daysOfWeek: Set<Int> = emptySet(), // Calendar.MONDAY, Calendar.TUESDAY, etc.
+    var ringtoneUri: String? = null, // New field to store ringtone URI
     var createdAt: Long = System.currentTimeMillis()
 ) {
     fun calculateNextTrigger(): Long {

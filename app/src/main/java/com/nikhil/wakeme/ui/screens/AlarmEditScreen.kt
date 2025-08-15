@@ -1,9 +1,13 @@
 package com.nikhil.wakeme.ui.screens
 
 import android.content.Intent
+import android.media.RingtoneManager
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -38,10 +46,9 @@ import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.ui.theme.Orbitron
 import kotlinx.coroutines.launch
 import java.util.Calendar
-import com.nikhil.wakeme.ui.theme.Orbitron // Import Orbitron font family
-import androidx.compose.material3.MaterialTheme // Import MaterialTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +61,22 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
     var alarm by remember { mutableStateOf<AlarmEntity?>(null) }
     var label by remember { mutableStateOf("") }
     var snoozeDuration by remember { mutableStateOf(10f) }
+    var selectedRingtoneUri by remember { mutableStateOf<Uri?>(null) }
+    var ringtoneTitle by remember { mutableStateOf("Default Ringtone") }
+
     val timePickerState = rememberTimePickerState()
+
+    val ringtonePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            selectedRingtoneUri = uri
+            ringtoneTitle = uri?.let {
+                RingtoneManager.getRingtone(context, it)?.getTitle(context)
+            } ?: "Default Ringtone"
+        }
+    }
 
     LaunchedEffect(alarmId) {
         if (!isNewAlarm) {
@@ -65,13 +87,16 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 val cal = Calendar.getInstance().apply { timeInMillis = it.timeMillis }
                 timePickerState.hour = cal.get(Calendar.HOUR_OF_DAY)
                 timePickerState.minute = cal.get(Calendar.MINUTE)
+                it.ringtoneUri?.let { uriString ->
+                    selectedRingtoneUri = Uri.parse(uriString)
+                    ringtoneTitle = RingtoneManager.getRingtone(context, selectedRingtoneUri)?.getTitle(context) ?: "Default Ringtone"
+                }
             }
         }
     }
 
     fun saveAlarm() {
         if (!AlarmScheduler.canScheduleExactAlarms(context)) {
-            // Show rationale and request permission
             val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                 data = Uri.fromParts("package", context.packageName, null)
             }
@@ -93,12 +118,14 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 timeMillis = cal.timeInMillis,
                 label = label,
                 snoozeDuration = snoozeDuration.toInt(),
-                enabled = true
+                enabled = true,
+                ringtoneUri = selectedRingtoneUri?.toString() // Save URI as string
             ) ?: AlarmEntity(
                 timeMillis = cal.timeInMillis,
                 label = label,
                 snoozeDuration = snoozeDuration.toInt(),
-                enabled = true
+                enabled = true,
+                ringtoneUri = selectedRingtoneUri?.toString() // Save URI as string
             )
 
             val id = if (isNewAlarm) repo.insert(alarmToSave) else {
@@ -118,14 +145,13 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 title = { Text(if (isNewAlarm) "New Alarm" else "Edit Alarm", style = MaterialTheme.typography.titleLarge, fontFamily = Orbitron) },
                 actions = {
                     TextButton(onClick = { saveAlarm() }) {
-                        Text("Save", fontFamily = Orbitron) // Apply Orbitron font
+                        Text("Save", fontFamily = Orbitron)
                     }
                 }
             )
         },
-        containerColor = androidx.compose.ui.graphics.Color.Transparent // Make Scaffold background transparent
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { padding ->
-
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
                 painter = painterResource(id = R.drawable.set_alarm_bg),
@@ -143,7 +169,7 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Alarm Label", fontFamily = Orbitron) }, // Apply Orbitron font to label
+                    label = { Text("Alarm Label", fontFamily = Orbitron) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -153,13 +179,36 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Snooze: ${snoozeDuration.toInt()} minutes", fontFamily = Orbitron) // Apply Orbitron font
+                Text("Snooze: ${snoozeDuration.toInt()} minutes", fontFamily = Orbitron)
 
                 Slider(
                     value = snoozeDuration,
                     onValueChange = { snoozeDuration = it },
                     valueRange = 5f..30f,
                     steps = 5
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedTextField(
+                    value = ringtoneTitle,
+                    onValueChange = { /* Read-only field */ },
+                    label = { Text("Ringtone", fontFamily = Orbitron) },
+                    readOnly = true,
+                    leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = "Ringtone") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Alarm Ringtone")
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                selectedRingtoneUri?.let {
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it)
+                                }
+                            }
+                            ringtonePickerLauncher.launch(intent)
+                        }
                 )
             }
         }

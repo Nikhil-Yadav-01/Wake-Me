@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.nikhil.wakeme.AlarmFullScreenActivity
@@ -18,11 +19,20 @@ object NotificationHelper {
     const val CHANNEL_NAME = "Wake Me Alarms"
     private const val FULL_SCREEN_ALARM_REQUEST_CODE = 1001
 
-    fun createChannelIfNeeded(context: Context) {
+    fun createChannelIfNeeded(context: Context, alarmSoundUri: Uri?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-                val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+            // Always recreate the channel if the sound URI changes, or if it doesn't exist
+            val existingChannel = notificationManager.getNotificationChannel(CHANNEL_ID)
+            val currentSoundUri = existingChannel?.sound
+
+            val soundUriToUse = alarmSoundUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+            if (existingChannel == null || currentSoundUri != soundUriToUse) {
+                // Delete existing channel if sound needs to change or channel needs re-creation
+                existingChannel?.let { notificationManager.deleteNotificationChannel(CHANNEL_ID) }
+
                 val audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -36,7 +46,7 @@ object NotificationHelper {
                     description = "Channel for alarm notifications"
                     enableVibration(true)
                     vibrationPattern = longArrayOf(0, 500, 500, 500)
-                    setSound(alarmSound, audioAttributes)
+                    setSound(soundUriToUse, audioAttributes)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -44,7 +54,8 @@ object NotificationHelper {
     }
 
     fun showAlarmNotification(context: Context, alarm: AlarmEntity) {
-        createChannelIfNeeded(context)
+        val alarmSoundUri = alarm.ringtoneUri?.let { Uri.parse(it) } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        createChannelIfNeeded(context, alarmSoundUri)
 
         val fullScreenIntent = Intent(context, AlarmFullScreenActivity::class.java).apply {
             putExtra("ALARM_ID", alarm.id)
@@ -67,6 +78,7 @@ object NotificationHelper {
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent) 
             .setOngoing(true)
+            .setSound(alarmSoundUri) // Explicitly set sound for pre-Oreo or if channel sound is not picked up
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(alarm.id.toInt(), notificationBuilder.build())
