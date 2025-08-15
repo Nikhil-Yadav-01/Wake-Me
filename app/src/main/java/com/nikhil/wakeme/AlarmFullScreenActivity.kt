@@ -1,18 +1,18 @@
 package com.nikhil.wakeme
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
@@ -63,19 +63,68 @@ fun FullScreenAlarmUI(label: String, onStop: () -> Unit, onSnooze: () -> Unit) {
     val b = remember { Random.nextInt(1, 12) }
     val answer = a * b
     var input by remember { mutableStateOf("") }
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.alarm_trigger_bg),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Solve to stop: $a × $b")
+            Text(
+                text = label,
+                style = MaterialTheme.typography.headlineSmall
+            )
+
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text("Answer") })
+
+            Text(
+                text = "To stop the alarm, solve this math problem:",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "$a × $b = ?",
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                label = { Text("Enter your answer") }
+            )
+
             Spacer(Modifier.height(12.dp))
+
             Row {
-                Button(onClick = {
-                    if (input.toIntOrNull() == answer) onStop()
-                }, modifier = Modifier.padding(8.dp)) {
+                Button(
+                    onClick = {
+                        if (input.toIntOrNull() == answer) {
+                            Toast.makeText(context, "Correct! Alarm stopped.", Toast.LENGTH_SHORT)
+                                .show()
+                            onStop()
+                        } else {
+                            Toast.makeText(context, "Wrong answer! Try again.", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    },
+                    modifier = Modifier.padding(8.dp)
+                ) {
                     Text("Submit")
                 }
-                Button(onClick = onSnooze, modifier = Modifier.padding(8.dp)) { Text("Snooze") }
+                Button(onClick = onSnooze, modifier = Modifier.padding(8.dp)) {
+                    Text("Snooze")
+                }
             }
         }
     }

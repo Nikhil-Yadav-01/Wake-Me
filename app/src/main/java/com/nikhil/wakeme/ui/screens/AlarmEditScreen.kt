@@ -91,13 +91,6 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(id = R.drawable.set_alarm_bg),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -111,6 +104,14 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
             },
             containerColor = androidx.compose.ui.graphics.Color.Transparent // Make Scaffold background transparent
         ) { padding ->
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                Image(
+                    painter = painterResource(id = R.drawable.set_alarm_bg),
+                    contentDescription = "Background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.FillBounds
+                )
             Column(
                 modifier = Modifier
                     .fillMaxSize()

@@ -63,7 +63,7 @@ object NotificationHelper {
             .setContentText("Time to wake up!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(false) // Changed to false so notification doesn't disappear on interaction
+            .setAutoCancel(false)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent) 
             .setOngoing(true)
