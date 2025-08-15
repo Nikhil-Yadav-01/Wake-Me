@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.nikhil.wakeme.AlarmFullScreenActivity
@@ -20,6 +22,12 @@ object NotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+                val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+
                 val channel = NotificationChannel(
                     CHANNEL_ID,
                     CHANNEL_NAME,
@@ -28,7 +36,7 @@ object NotificationHelper {
                     description = "Channel for alarm notifications"
                     enableVibration(true)
                     vibrationPattern = longArrayOf(0, 500, 500, 500)
-                    setSound(null, null) 
+                    setSound(alarmSound, audioAttributes)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -37,10 +45,10 @@ object NotificationHelper {
 
     fun showAlarmNotification(context: Context, alarm: AlarmEntity) {
         createChannelIfNeeded(context)
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val fullScreenIntent = Intent(context, AlarmFullScreenActivity::class.java).apply {
             putExtra("ALARM_ID", alarm.id)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context,
@@ -49,16 +57,22 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // Use an appropriate icon
             .setContentTitle(alarm.label ?: "Alarm")
-            .setContentText("It's time to wake up!")
+            .setContentText("Time to wake up!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setAutoCancel(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setOngoing(true)
-            .build()
 
-        notificationManager.notify(alarm.id.toInt(), notification)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(alarm.id.toInt(), notificationBuilder.build())
+    }
+
+    fun cancelNotification(context: Context, alarmId: Int) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(alarmId)
     }
 }
