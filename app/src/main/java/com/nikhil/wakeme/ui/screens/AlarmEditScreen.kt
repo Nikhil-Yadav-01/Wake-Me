@@ -146,10 +146,9 @@ fun AlarmEditScreen(navController: NavController, alarmId: Long) {
                     label = { Text("Alarm Label", fontFamily = Orbitron) }, // Apply Orbitron font to label
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // TimePicker internally uses its own text styles, applying fontFamily directly might not work for all its sub-components.
-                // However, the overall theme's typography will influence it.
                 TimePicker(state = timePickerState)
 
                 Spacer(modifier = Modifier.height(24.dp))
