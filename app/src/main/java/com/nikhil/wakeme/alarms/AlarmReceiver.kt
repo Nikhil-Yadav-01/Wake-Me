@@ -4,9 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -17,12 +17,19 @@ class AlarmReceiver : BroadcastReceiver() {
                 .putLong(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .build()
 
-            val workRequest = OneTimeWorkRequestBuilder<AlarmWorker>()
+            val alarmWorkRequest = OneTimeWorkRequestBuilder<AlarmWorker>()
                 .setInputData(alarmData)
-                .setInitialDelay(0, TimeUnit.MILLISECONDS) // Run immediately
                 .addTag("${AlarmScheduler.ALARM_WORK_TAG_PREFIX}$alarmId")
                 .build()
-            workManager.enqueue(workRequest)
+
+            // Use enqueueUniqueWork to prevent multiple workers for the same alarm event.
+            // This is the key to preventing the race condition.
+            val uniqueWorkName = "alarm_work_$alarmId"
+            workManager.enqueueUniqueWork(
+                uniqueWorkName,
+                ExistingWorkPolicy.REPLACE, // If work already exists, replace it. This is safe.
+                alarmWorkRequest
+            )
         }
     }
 }

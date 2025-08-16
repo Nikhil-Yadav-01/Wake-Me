@@ -44,6 +44,12 @@ class AlarmService : Service() {
 
         when (intent?.action) {
             ACTION_START -> {
+                // This check makes the service idempotent.
+                // If the sound is already playing, do nothing.
+                if (mediaPlayer?.isPlaying == true) {
+                    return START_STICKY
+                }
+
                 CoroutineScope(Dispatchers.IO).launch {
                     val alarm = AlarmDatabase.getInstance(applicationContext).alarmDao().getById(alarmId)
                     if (alarm != null) {
@@ -76,12 +82,14 @@ class AlarmService : Service() {
             @Suppress("DEPRECATION")
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
-        vibrator?.vibrate(
-            VibrationEffect.createWaveform(
-                longArrayOf(0, 1000, 1000),
-                0
-            )
-        )
+
+        // Correctly handle vibration for different API levels
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 1000, 1000), 0))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(longArrayOf(0, 1000, 1000), 0)
+        }
     }
 
     private fun stopAlarm() {
