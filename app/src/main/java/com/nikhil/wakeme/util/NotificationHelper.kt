@@ -5,54 +5,41 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.AlarmEntity
-import androidx.core.net.toUri
 
 object NotificationHelper {
-    const val CHANNEL_ID = "wake_me_alarm_channel"
-    const val CHANNEL_NAME = "Wake Me Alarms"
+    private const val CHANNEL_ID = "wake_me_alarm_channel"
+    private const val CHANNEL_NAME = "Wake Me Alarms"
     private const val FULL_SCREEN_ALARM_REQUEST_CODE = 1001
 
-    fun createChannelIfNeeded(context: Context, alarmSoundUri: Uri?) {
+    // This function creates the channel responsible for *displaying* the alarm UI.
+    // It is intentionally silent because the sound will be handled by a foreground service.
+    private fun createSilentChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-            val soundUriToUse = alarmSoundUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-
-            // Always delete and recreate the channel to ensure the sound is updated correctly
-            // This is a robust way to handle channel property changes, especially sound.
-            notificationManager.deleteNotificationChannel(CHANNEL_ID)
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Channel for alarm notifications"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 500, 500, 500)
-                setSound(soundUriToUse, audioAttributes)
+                description = "Channel for displaying the alarm screen"
+                // No sound or vibration here.
+                setSound(null, null)
+                enableVibration(false)
             }
             notificationManager.createNotificationChannel(channel)
         }
     }
 
     fun showAlarmNotification(context: Context, alarm: AlarmEntity) {
-        val alarmSoundUri = alarm.ringtoneUri?.toUri() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        createChannelIfNeeded(context, alarmSoundUri)
+        // Ensure the silent channel exists.
+        createSilentChannel(context)
 
+        // This intent will launch the full-screen alarm activity.
         val fullScreenIntent = Intent(context, AlarmTriggerActivity::class.java).apply {
             putExtra("ALARM_ID", alarm.id)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -64,17 +51,16 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Build the notification that will trigger the full-screen intent.
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Use an appropriate icon
+            .setSmallIcon(R.drawable.ic_wake_pulse)
             .setContentTitle(alarm.label ?: "Alarm")
             .setContentText("Time to wake up!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(false)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
-            .setContentIntent(fullScreenPendingIntent) 
+            .setFullScreenIntent(fullScreenPendingIntent, true) // This is the key part.
             .setOngoing(true)
-            .setSound(alarmSoundUri) // Explicitly set sound for pre-Oreo or if channel sound is not picked up
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(alarm.id.toInt(), notificationBuilder.build())

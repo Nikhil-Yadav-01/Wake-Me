@@ -130,6 +130,8 @@ private fun AlarmEditContent(
         }
     }
 
+    var selectedDays by remember { mutableStateOf(alarm?.daysOfWeek ?: emptySet()) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -137,7 +139,7 @@ private fun AlarmEditContent(
                 actions = {
                     TextButton(onClick = {
                         val snoozeMinutes = (if (selectedSnoozeOption == "Custom") customSnoozeValue.toIntOrNull() else selectedSnoozeOption.toIntOrNull()) ?: 10
-                        onSave(hour, minute, label, snoozeMinutes, selectedRingtoneUri, emptySet())
+                        onSave(hour, minute, label, snoozeMinutes, selectedRingtoneUri, selectedDays)
                     }) {
                         Text("Save")
                     }
@@ -178,6 +180,7 @@ private fun AlarmEditContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
             OutlinedTextField(
                 value = label,
                 onValueChange = { label = it },
@@ -185,7 +188,25 @@ private fun AlarmEditContent(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(24.dp))
+
+            Text("Repeat", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DayOfWeekSelector(
+                selectedDays = selectedDays,
+                onDaySelected = { day, isSelected ->
+                    selectedDays = if (isSelected) {
+                        selectedDays + day
+                    } else {
+                        selectedDays - day
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text("Snooze Duration", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -239,6 +260,33 @@ private fun AlarmEditContent(
                     singleLine = true
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun DayOfWeekSelector(
+    selectedDays: Set<Int>,
+    onDaySelected: (Int, Boolean) -> Unit
+) {
+    val days = listOf("S", "M", "T", "W", "T", "F", "S")
+    val calendarDays = listOf(
+        Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY,
+        Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        days.forEachIndexed { index, dayLabel ->
+            val calendarDay = calendarDays[index]
+            val isSelected = selectedDays.contains(calendarDay)
+            ElevatedFilterChip(
+                selected = isSelected,
+                onClick = { onDaySelected(calendarDay, !isSelected) },
+                label = { Text(dayLabel) }
+            )
         }
     }
 }

@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
 
     <application
         android:allowBackup="true"
@@ -34,7 +36,8 @@
             android:name=".AlarmTriggerActivity"
             android:exported="true"
             android:showOnLockScreen="true"
-            android:turnScreenOn="true" />
+            android:turnScreenOn="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
         <receiver
             android:name=".alarms.BootReceiver"
@@ -48,6 +51,8 @@
         <receiver
             android:name=".alarms.AlarmReceiver"
             android:exported="false" />
+
+        <service android:name=".alarms.AlarmService" android:foregroundServiceType="mediaPlayback" />
 
     </application>
 

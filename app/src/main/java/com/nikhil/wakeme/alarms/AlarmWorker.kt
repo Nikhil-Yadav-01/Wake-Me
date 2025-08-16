@@ -1,6 +1,7 @@
 package com.nikhil.wakeme.alarms
 
 import android.content.Context
+import android.content.Intent
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.nikhil.wakeme.data.AlarmDatabase
@@ -21,21 +22,25 @@ class AlarmWorker(
         val alarm = db.alarmDao().getById(alarmId) ?: return Result.failure()
 
         if (alarm.enabled) {
+            // 1. Show the full-screen UI
             NotificationHelper.showAlarmNotification(context, alarm)
 
-            // After the alarm fires, we decide what the next trigger time should be.
+            // 2. Start the foreground service to play the sound
+            val serviceIntent = Intent(context, AlarmService::class.java).apply {
+                action = AlarmService.ACTION_START
+                putExtra("ALARM_ID", alarm.id)
+            }
+            context.startService(serviceIntent)
+
+            // 3. Reschedule or disable the alarm for the future
             if (alarm.daysOfWeek.isNotEmpty()) {
-                // This is a recurring alarm. We must calculate its next regular occurrence.
                 val nextTriggerMillis = alarm.calculateNextTrigger()
                 val updatedAlarm = alarm.copy(ringTime = nextTriggerMillis)
                 db.alarmDao().update(updatedAlarm)
-                // Reschedule the alarm for its next regular time.
                 AlarmScheduler.scheduleAlarm(context, updatedAlarm)
             } else {
-                // This is a one-time alarm. It should be disabled after it fires.
                 val updatedAlarm = alarm.copy(enabled = false)
                 db.alarmDao().update(updatedAlarm)
-                // We don't reschedule, as the alarm is now disabled.
             }
         }
 

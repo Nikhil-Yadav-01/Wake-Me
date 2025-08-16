@@ -11,19 +11,18 @@ import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class AlarmEditViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AlarmRepository(application)
 
-    // uiState now emits Resource<AlarmEntity?>
     private val _uiState = MutableStateFlow<Resource<AlarmEntity?>>(Resource.Loading())
     val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
-        // Reset to Loading every time we load a new alarm or re-load
         _uiState.value = Resource.Loading()
         if (alarmId == 0L) {
-            _uiState.value = Resource.Success(null) // New alarm, no existing data
+            _uiState.value = Resource.Success(null)
         } else {
             viewModelScope.launch {
                 try {
@@ -31,7 +30,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                     if (alarm != null) {
                         _uiState.value = Resource.Success(alarm)
                     } else {
-                        _uiState.value = Resource.Error("Alarm not found") // Handle case where alarm doesn't exist
+                        _uiState.value = Resource.Error("Alarm not found")
                     }
                 } catch (e: Exception) {
                     _uiState.value = Resource.Error("Failed to load alarm: ${e.message}")
@@ -54,7 +53,19 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                 val isNewAlarm = alarmId == 0L
                 val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
 
-                val alarmEntity = (existingAlarm ?: AlarmEntity(ringTime = 0)).copy(
+                // Calculate the initial ring time based on the selected hour and minute
+                val calendar = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, hour)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                    // If the time is in the past, move it to the next day
+                    if (before(Calendar.getInstance())) {
+                        add(Calendar.DAY_OF_MONTH, 1)
+                    }
+                }
+
+                val alarmEntity = (existingAlarm ?: AlarmEntity(ringTime = calendar.timeInMillis)).copy(
                     label = label,
                     snoozeDuration = snoozeDuration,
                     enabled = true,
@@ -64,6 +75,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                     originalMinute = minute
                 )
 
+                // The calculateNextTrigger function will handle the logic for repeating alarms
                 val nextTriggerTime = alarmEntity.calculateNextTrigger()
                 val finalAlarmToSave = alarmEntity.copy(ringTime = nextTriggerTime)
 
@@ -75,9 +87,8 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                 }
 
                 AlarmScheduler.scheduleAlarm(getApplication(), finalAlarmToSave.copy(id = id))
-                // If you want to reflect the saved state in UI: _uiState.value = Resource.Success(finalAlarmToSave.copy(id = id))
             } catch (e: Exception) {
-                 _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
+                _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
             }
         }
     }
