@@ -61,7 +61,7 @@ fun AlarmItem(
                 Column(modifier = Modifier.weight(1f)) {
                     val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
                     Text(
-                        text = timeFormat.format(Date(alarm.timeMillis)),
+                        text = timeFormat.format(Date(alarm.ringTime)),
                         style = MaterialTheme.typography.headlineMedium
                     )
                     Text(

@@ -12,8 +12,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.nikhil.wakeme.ui.screens.AlarmTriggerScreen
 
-class AlarmFullScreenActivity : ComponentActivity() {
-    private val viewModel: AlarmFullScreenViewModel by viewModels()
+class AlarmTriggerActivity : ComponentActivity() {
+    private val viewModel: AlarmTriggerViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

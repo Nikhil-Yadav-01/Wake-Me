@@ -62,13 +62,13 @@ object AlarmScheduler {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (canScheduleExactAlarms(context)) {
-                alarmManager?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.timeMillis, pendingIntent)
+                alarmManager?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.ringTime, pendingIntent)
             } else {
                 // Fallback for devices where exact alarms cannot be scheduled (e.g., permission not granted)
                 scheduleAlarmWithWorkManager(context, alarm)
             }
         } else {
-            alarmManager?.setExact(AlarmManager.RTC_WAKEUP, alarm.timeMillis, pendingIntent)
+            alarmManager?.setExact(AlarmManager.RTC_WAKEUP, alarm.ringTime, pendingIntent)
         }
     }
 
@@ -82,7 +82,7 @@ object AlarmScheduler {
             .putLong(EXTRA_ALARM_ID, alarm.id)
             .build()
 
-        val delay = alarm.timeMillis - System.currentTimeMillis()
+        val delay = alarm.ringTime - System.currentTimeMillis()
         if (delay < 0) return
 
         val workRequest = OneTimeWorkRequestBuilder<AlarmWorker>()

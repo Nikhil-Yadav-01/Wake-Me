@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(application) {
+class AlarmTriggerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AlarmDatabase.getInstance(application)
     private val _alarm = MutableStateFlow<AlarmEntity?>(null)
@@ -32,7 +32,7 @@ class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(appl
             val snoozedTimeMillis = System.currentTimeMillis() + it.snoozeDuration * 60 * 1000L
 
             val snoozedAlarm = it.copy(
-                timeMillis = snoozedTimeMillis,
+                ringTime = snoozedTimeMillis,
                 enabled = true // Ensure alarm remains enabled
                 // originalHour and originalMinute are NOT modified here
             )
@@ -51,7 +51,7 @@ class AlarmFullScreenViewModel(application: Application) : AndroidViewModel(appl
                 // For recurring alarms, reschedule to the NEXT REGULAR occurrence
                 val nextRegularTrigger = it.calculateNextTrigger() // Use the updated calculateNextTrigger
                 val updatedAlarm = it.copy(
-                    timeMillis = nextRegularTrigger,
+                    ringTime = nextRegularTrigger,
                     enabled = true // Keep enabled for recurring alarms
                 )
                 viewModelScope.launch {

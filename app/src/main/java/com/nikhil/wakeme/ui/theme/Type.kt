@@ -12,7 +12,7 @@ import com.nikhil.wakeme.R
 val Orbitron = FontFamily(
     Font(R.font.orbitron_regular, FontWeight.Normal),
     Font(R.font.orbitron_bold, FontWeight.Bold),
-     Font(R.font.orbitron_medium, FontWeight.Medium)
+    Font(R.font.orbitron_medium, FontWeight.Medium)
 )
 
 val Typography = Typography(
@@ -110,21 +110,21 @@ val Typography = Typography(
     // Label styles
     labelLarge = TextStyle(
         fontFamily = Orbitron,
-        fontWeight = FontWeight.Medium, // Will fall back to Normal or Bold
+        fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
         fontFamily = Orbitron,
-        fontWeight = FontWeight.Medium, // Will fall back to Normal or Bold
+        fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
         fontFamily = Orbitron,
-        fontWeight = FontWeight.Medium, // Will fall back to Normal or Bold
+        fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp

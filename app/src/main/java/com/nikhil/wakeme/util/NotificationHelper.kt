@@ -10,9 +10,10 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.nikhil.wakeme.AlarmFullScreenActivity
+import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.AlarmEntity
+import androidx.core.net.toUri
 
 object NotificationHelper {
     const val CHANNEL_ID = "wake_me_alarm_channel"
@@ -49,10 +50,10 @@ object NotificationHelper {
     }
 
     fun showAlarmNotification(context: Context, alarm: AlarmEntity) {
-        val alarmSoundUri = alarm.ringtoneUri?.let { Uri.parse(it) } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val alarmSoundUri = alarm.ringtoneUri?.toUri() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         createChannelIfNeeded(context, alarmSoundUri)
 
-        val fullScreenIntent = Intent(context, AlarmFullScreenActivity::class.java).apply {
+        val fullScreenIntent = Intent(context, AlarmTriggerActivity::class.java).apply {
             putExtra("ALARM_ID", alarm.id)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }

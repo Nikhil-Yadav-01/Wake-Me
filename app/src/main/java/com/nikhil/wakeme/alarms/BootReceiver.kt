@@ -28,8 +28,8 @@ class BootReceiver : BroadcastReceiver() {
                 Log.i("BootReceiver", "Rescheduling ${alarms.size} alarms.")
                 for (a in alarms) {
                     val nextTrigger = a.calculateNextTrigger()
-                    if (a.timeMillis != nextTrigger) {
-                        a.timeMillis = nextTrigger
+                    if (a.ringTime != nextTrigger) {
+                        a.ringTime = nextTrigger
                         db.alarmDao().update(a)
                     }
                     AlarmScheduler.scheduleAlarm(appContext, a)

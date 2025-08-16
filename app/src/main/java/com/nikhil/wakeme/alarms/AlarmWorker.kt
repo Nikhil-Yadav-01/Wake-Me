@@ -27,7 +27,7 @@ class AlarmWorker(
             if (alarm.daysOfWeek.isNotEmpty()) {
                 // This is a recurring alarm. We must calculate its next regular occurrence.
                 val nextTriggerMillis = alarm.calculateNextTrigger()
-                val updatedAlarm = alarm.copy(timeMillis = nextTriggerMillis)
+                val updatedAlarm = alarm.copy(ringTime = nextTriggerMillis)
                 db.alarmDao().update(updatedAlarm)
                 // Reschedule the alarm for its next regular time.
                 AlarmScheduler.scheduleAlarm(context, updatedAlarm)

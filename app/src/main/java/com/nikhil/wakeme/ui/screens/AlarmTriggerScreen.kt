@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -71,7 +72,12 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                label = { Text("Enter your answer") }
+                label = {
+                    Text(
+                        "Enter your answer",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
             )
 
             Spacer(Modifier.height(12.dp))
@@ -80,20 +86,35 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
                 Button(
                     onClick = {
                         if (input.toIntOrNull() == answer) {
-                            Toast.makeText(context, "Correct! Alarm stopped.", Toast.LENGTH_SHORT)
-                                .show()
                             onStop()
                         } else {
                             Toast.makeText(context, "Wrong answer! Try again.", Toast.LENGTH_SHORT)
                                 .show()
                         }
                     },
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 ) {
-                    Text("Submit")
+                    Text(
+                        "Submit",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
-                Button(onClick = onSnooze, modifier = Modifier.padding(8.dp)) {
-                    Text("Snooze")
+                Button(
+                    onClick = onSnooze,
+                    modifier = Modifier.padding(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Text(
+                        "Snooze",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
         }

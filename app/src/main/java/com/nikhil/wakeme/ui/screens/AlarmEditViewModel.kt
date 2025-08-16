@@ -10,7 +10,6 @@ import com.nikhil.wakeme.data.AlarmRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 sealed interface AlarmEditUiState {
     data class Success(val alarm: AlarmEntity?) : AlarmEditUiState
@@ -53,7 +52,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
             val hourToSave = hour
             val minuteToSave = minute
 
-            val alarmEntity = (existingAlarm ?: AlarmEntity(timeMillis = 0)).copy(
+            val alarmEntity = (existingAlarm ?: AlarmEntity(ringTime = 0)).copy(
                 label = label,
                 snoozeDuration = snoozeDuration,
                 enabled = true,
@@ -67,7 +66,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
             // This ensures the alarm is initially scheduled for the correct next occurrence
             // based on the original time and daysOfWeek.
             val nextTriggerTime = alarmEntity.calculateNextTrigger()
-            val finalAlarmToSave = alarmEntity.copy(timeMillis = nextTriggerTime)
+            val finalAlarmToSave = alarmEntity.copy(ringTime = nextTriggerTime)
 
             val id = if (isNewAlarm) {
                 repo.insert(finalAlarmToSave)

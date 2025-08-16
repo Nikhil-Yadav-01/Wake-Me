@@ -31,7 +31,7 @@
         </activity>
 
         <activity
-            android:name=".AlarmFullScreenActivity"
+            android:name=".AlarmTriggerActivity"
             android:exported="true"
             android:showOnLockScreen="true"
             android:turnScreenOn="true" />

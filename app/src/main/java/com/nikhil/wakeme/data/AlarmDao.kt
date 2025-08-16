@@ -14,10 +14,10 @@ interface AlarmDao {
     @Delete
     suspend fun delete(alarm: AlarmEntity): Int
 
-    @Query("SELECT * FROM alarms WHERE enabled = 1 ORDER BY timeMillis")
+    @Query("SELECT * FROM alarms WHERE enabled = 1 ORDER BY ringTime")
     fun getEnabledAlarmsFlow(): Flow<List<AlarmEntity>>
 
-    @Query("SELECT * FROM alarms ORDER BY timeMillis")
+    @Query("SELECT * FROM alarms ORDER BY ringTime")
     fun getAllFlow(): Flow<List<AlarmEntity>>
 
     @Query("SELECT * FROM alarms WHERE id = :id")

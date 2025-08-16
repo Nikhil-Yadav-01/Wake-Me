@@ -7,14 +7,12 @@ import java.util.Calendar
 @Entity(tableName = "alarms")
 data class AlarmEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    var timeMillis: Long,
+    var ringTime: Long,
     var enabled: Boolean = true,
     var label: String? = null,
     var snoozeDuration: Int = 10, // in minutes
     var daysOfWeek: Set<Int> = emptySet(), // Calendar.MONDAY, Calendar.TUESDAY, etc.
     var ringtoneUri: String? = null,
-    // Store the original hour and minute for recurring alarms.
-    // This is set when the alarm is created and should not be updated on snooze.
     var originalHour: Int? = null,
     var originalMinute: Int? = null,
     var createdAt: Long = System.currentTimeMillis()
@@ -23,14 +21,14 @@ data class AlarmEntity(
         val now = Calendar.getInstance()
 
         // Use the dedicated originalHour and originalMinute for recurring alarms.
-        val alarmHour = originalHour ?: Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.timeMillis }.get(Calendar.HOUR_OF_DAY)
-        val alarmMinute = originalMinute ?: Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.timeMillis }.get(Calendar.MINUTE)
+        val alarmHour = originalHour ?: Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.ringTime }.get(Calendar.HOUR_OF_DAY)
+        val alarmMinute = originalMinute ?: Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.ringTime }.get(Calendar.MINUTE)
 
         if (daysOfWeek.isEmpty()) {
             // For one-time alarms, after they fire, they should be disabled.
             // No next trigger calculation is needed. Return the current time to fulfill the function's
             // contract, but the AlarmWorker is responsible for disabling the alarm.
-            return timeMillis
+            return ringTime
         }
 
         // For recurring alarms, find the next valid day.
