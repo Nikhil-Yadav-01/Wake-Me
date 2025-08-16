@@ -1,11 +1,11 @@
-package com.nikhil.wakeme
+package com.nikhil.wakeme.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmDatabase
 import com.nikhil.wakeme.data.AlarmEntity
-import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.util.NotificationHelper
 import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class AlarmTriggerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val db = AlarmDatabase.getInstance(application)
+    private val db = AlarmDatabase.Companion.getInstance(application)
     private val _uiState = MutableStateFlow<Resource<AlarmEntity>>(Resource.Loading())
     val uiState = _uiState.asStateFlow()
     private val scheduler = AlarmScheduler
@@ -44,7 +44,7 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
             val snoozedTimeMillis = System.currentTimeMillis() + alarm.snoozeDuration * 60 * 1000L
 
             val snoozedAlarm = alarm.copy(
-                timeMillis = snoozedTimeMillis,
+                ringTime = snoozedTimeMillis,
                 enabled = true
             )
             viewModelScope.launch {
@@ -63,7 +63,7 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
             if (alarm.daysOfWeek.isNotEmpty()) {
                 val nextRegularTrigger = alarm.calculateNextTrigger()
                 val updatedAlarm = alarm.copy(
-                    timeMillis = nextRegularTrigger,
+                    ringTime = nextRegularTrigger,
                     enabled = true
                 )
                 viewModelScope.launch {

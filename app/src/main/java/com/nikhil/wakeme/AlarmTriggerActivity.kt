@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.nikhil.wakeme.ui.screens.AlarmTriggerScreen
 import com.nikhil.wakeme.util.Resource // Import the Resource class
+import com.nikhil.wakeme.viewmodels.AlarmTriggerViewModel
 
 class AlarmTriggerActivity : ComponentActivity() {
     private val viewModel: AlarmTriggerViewModel by viewModels()

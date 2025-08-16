@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,7 @@ import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.util.Resource
+import com.nikhil.wakeme.viewmodels.AlarmListViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,56 +86,85 @@ fun AlarmListScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                if (!hasExactAlarmPermission) {
-                    // Permission Card
-                }
-
-                when (val resource = uiState) {
-                    is Resource.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                if (hasExactAlarmPermission) {
+                    when (val resource = uiState) {
+                        is Resource.Loading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
-                    }
-                    is Resource.Success -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(resource.data, key = { it.id }) { alarm ->
-                                AlarmItem(
-                                    alarm = alarm,
-                                    onToggle = { enabled ->
-                                        val updatedAlarm = alarm.copy(enabled = enabled)
-                                        scope.launch {
-                                            repo.update(updatedAlarm)
-                                            if (enabled) {
-                                                AlarmScheduler.scheduleAlarm(context, updatedAlarm)
-                                            } else {
-                                                AlarmScheduler.cancelAlarm(context, alarm.id)
+
+                        is Resource.Success -> {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(resource.data, key = { it.id }) { alarm ->
+                                    AlarmItem(
+                                        alarm = alarm,
+                                        onToggle = { enabled ->
+                                            val updatedAlarm = alarm.copy(enabled = enabled)
+                                            scope.launch {
+                                                repo.update(updatedAlarm)
+                                                if (enabled) {
+                                                    AlarmScheduler.scheduleAlarm(
+                                                        context,
+                                                        updatedAlarm
+                                                    )
+                                                } else {
+                                                    AlarmScheduler.cancelAlarm(context, alarm.id)
+                                                }
                                             }
+                                        },
+                                        onClick = {
+                                            nav.navigate("edit/${alarm.id}")
                                         }
-                                    },
-                                    onClick = {
-                                        nav.navigate("edit/${alarm.id}")
-                                    }
+                                    )
+                                }
+                            }
+                        }
+
+                        is Resource.Empty -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "No alarms set.",
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
-                    }
-                    is Resource.Empty -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "No alarms set.",
-                                style = MaterialTheme.typography.headlineLarge,
-                                textAlign = TextAlign.Center
-                            )
+
+                        is Resource.Error -> {
+                            Toast.makeText(context, resource.message, Toast.LENGTH_SHORT).show()
                         }
                     }
-                    is Resource.Error -> {
-                        // Optional: Handle error state
+                } else {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Permission Required",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "To ensure alarms work correctly, please grant the permission to schedule exact alarms.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { requestExactAlarmPermission() }) {
+                                Text("Grant Permission", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
                     }
                 }
             }

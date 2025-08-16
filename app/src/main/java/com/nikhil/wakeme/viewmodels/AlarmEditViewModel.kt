@@ -1,4 +1,4 @@
-package com.nikhil.wakeme.ui.screens
+package com.nikhil.wakeme.viewmodels
 
 import android.app.Application
 import android.net.Uri
@@ -16,12 +16,12 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
     private val repo = AlarmRepository(application)
 
     // uiState now emits Resource<AlarmEntity?>
-    private val _uiState = MutableStateFlow<Resource<AlarmEntity?>>(Resource.Loading)
+    private val _uiState = MutableStateFlow<Resource<AlarmEntity?>>(Resource.Loading())
     val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
         // Reset to Loading every time we load a new alarm or re-load
-        _uiState.value = Resource.Loading
+        _uiState.value = Resource.Loading()
         if (alarmId == 0L) {
             _uiState.value = Resource.Success(null) // New alarm, no existing data
         } else {
@@ -50,13 +50,11 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         daysOfWeek: Set<Int>
     ) {
         viewModelScope.launch {
-            // Optionally, you could set _uiState to Resource.Loading() here as well
-            // to show a saving indicator, but for quick operations, it might flicker.
             try {
                 val isNewAlarm = alarmId == 0L
                 val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
 
-                val alarmEntity = (existingAlarm ?: AlarmEntity(timeMillis = 0)).copy(
+                val alarmEntity = (existingAlarm ?: AlarmEntity(ringTime = 0)).copy(
                     label = label,
                     snoozeDuration = snoozeDuration,
                     enabled = true,
@@ -67,7 +65,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                 )
 
                 val nextTriggerTime = alarmEntity.calculateNextTrigger()
-                val finalAlarmToSave = alarmEntity.copy(timeMillis = nextTriggerTime)
+                val finalAlarmToSave = alarmEntity.copy(ringTime = nextTriggerTime)
 
                 val id = if (isNewAlarm) {
                     repo.insert(finalAlarmToSave)
@@ -79,8 +77,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                 AlarmScheduler.scheduleAlarm(getApplication(), finalAlarmToSave.copy(id = id))
                 // If you want to reflect the saved state in UI: _uiState.value = Resource.Success(finalAlarmToSave.copy(id = id))
             } catch (e: Exception) {
-                // Handle save error, e.g., show a Toast or update UI state to Resource.Error
-                // _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
+                 _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
             }
         }
     }

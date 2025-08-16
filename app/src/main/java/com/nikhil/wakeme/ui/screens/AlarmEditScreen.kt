@@ -4,6 +4,7 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -28,15 +29,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.util.Resource
+import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.snapshotFlow
 import java.util.*
 import kotlin.math.abs
 
@@ -80,10 +83,9 @@ fun AlarmEditScreen(
                 )
             }
             is Resource.Error -> {
-                // Optionally handle error state, e.g., show a Snackbar
+                Toast.makeText(LocalContext.current, resource.message, Toast.LENGTH_SHORT).show()
             }
             is Resource.Empty -> {
-                // This state is not expected for AlarmEditScreen, but you could handle it.
             }
         }
     }
@@ -106,7 +108,7 @@ private fun AlarmEditContent(
     var hour by remember { mutableStateOf(initialHour) }
     var minute by remember { mutableStateOf(initialMinute) }
 
-    var label by remember { mutableState of(alarm?.label ?: "") }
+    var label by remember { mutableStateOf(alarm?.label ?: "") }
     var selectedSnoozeOption by remember { mutableStateOf(if (alarm?.snoozeDuration in listOf(5, 10, 15)) alarm?.snoozeDuration.toString() else "Custom") }
     var customSnoozeValue by remember { mutableStateOf(alarm?.snoozeDuration?.toString() ?: "10") }
 
@@ -152,7 +154,7 @@ private fun AlarmEditContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                AnimatedVisibility(visible = !isWheelPickerVisible) {
+                androidx.compose.animation.AnimatedVisibility(visible = !isWheelPickerVisible) {
                     val timePickerState = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
                     LaunchedEffect(timePickerState.hour, timePickerState.minute) {
                         hour = timePickerState.hour
@@ -160,7 +162,8 @@ private fun AlarmEditContent(
                     }
                     TimePicker(state = timePickerState)
                 }
-                AnimatedVisibility(visible = isWheelPickerVisible) {
+
+                androidx.compose.animation.AnimatedVisibility(visible = isWheelPickerVisible) {
                     TimePickerWheel(
                         hour = hour,
                         minute = minute,
@@ -187,7 +190,7 @@ private fun AlarmEditContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             val snoozeOptions = listOf("5", "10", "15", "Custom")
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Center) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 items(snoozeOptions) { duration ->
                     FilterChip(
                         selected = selectedSnoozeOption == duration,
@@ -314,4 +317,14 @@ fun NumberWheel(
             )
         }
     }
+}
+
+
+@Preview
+@Composable
+fun EditPreview() {
+    AlarmEditScreen(
+        navController = rememberNavController(),
+        alarmId = 1L,
+    )
 }

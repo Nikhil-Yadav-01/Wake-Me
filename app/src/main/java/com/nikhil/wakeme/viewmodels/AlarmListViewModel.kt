@@ -1,4 +1,4 @@
-package com.nikhil.wakeme.ui.screens
+package com.nikhil.wakeme.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -17,14 +17,14 @@ class AlarmListViewModel(application: Application) : AndroidViewModel(applicatio
     val uiState: StateFlow<Resource<List<AlarmEntity>>> = repo.getAllFlow()
         .map { alarms ->
             if (alarms.isEmpty()) {
-                Resource.Empty
+                Resource.Empty()
             } else {
                 Resource.Success(alarms)
             }
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = Resource.Loading
+            started = SharingStarted.Companion.WhileSubscribed(5000),
+            initialValue = Resource.Loading()
         )
 }
