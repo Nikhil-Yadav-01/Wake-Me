@@ -7,6 +7,7 @@ import com.nikhil.wakeme.data.AlarmDatabase
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.util.NotificationHelper
+import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -14,27 +15,37 @@ import kotlinx.coroutines.launch
 class AlarmTriggerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AlarmDatabase.getInstance(application)
-    private val _alarm = MutableStateFlow<AlarmEntity?>(null)
-    val alarm = _alarm.asStateFlow()
+    private val _uiState = MutableStateFlow<Resource<AlarmEntity>>(Resource.Loading())
+    val uiState = _uiState.asStateFlow()
     private val scheduler = AlarmScheduler
 
     fun loadAlarm(alarmId: Long) {
+        _uiState.value = Resource.Loading()
         viewModelScope.launch {
-            _alarm.value = db.alarmDao().getById(alarmId)
+            if (alarmId == -1L) {
+                _uiState.value = Resource.Error("Invalid Alarm ID")
+                return@launch
+            }
+            val alarm = db.alarmDao().getById(alarmId)
+            if (alarm != null) {
+                _uiState.value = Resource.Success(alarm)
+            } else {
+                _uiState.value = Resource.Error("Alarm not found")
+            }
         }
     }
 
     fun snoozeAlarm() {
-        alarm.value?.let {
-            NotificationHelper.cancelNotification(getApplication(), it.id.toInt())
+        val currentState = uiState.value
+        if (currentState is Resource.Success) {
+            val alarm = currentState.data
+            NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
 
-            // Calculate snooze time as current time + snooze duration
-            val snoozedTimeMillis = System.currentTimeMillis() + it.snoozeDuration * 60 * 1000L
+            val snoozedTimeMillis = System.currentTimeMillis() + alarm.snoozeDuration * 60 * 1000L
 
-            val snoozedAlarm = it.copy(
-                ringTime = snoozedTimeMillis,
-                enabled = true // Ensure alarm remains enabled
-                // originalHour and originalMinute are NOT modified here
+            val snoozedAlarm = alarm.copy(
+                timeMillis = snoozedTimeMillis,
+                enabled = true
             )
             viewModelScope.launch {
                 db.alarmDao().update(snoozedAlarm)
@@ -44,26 +55,26 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun stopAlarm() {
-        alarm.value?.let {
-            NotificationHelper.cancelNotification(getApplication(), it.id.toInt())
+        val currentState = uiState.value
+        if (currentState is Resource.Success) {
+            val alarm = currentState.data
+            NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
 
-            if (it.daysOfWeek.isNotEmpty()) {
-                // For recurring alarms, reschedule to the NEXT REGULAR occurrence
-                val nextRegularTrigger = it.calculateNextTrigger() // Use the updated calculateNextTrigger
-                val updatedAlarm = it.copy(
-                    ringTime = nextRegularTrigger,
-                    enabled = true // Keep enabled for recurring alarms
+            if (alarm.daysOfWeek.isNotEmpty()) {
+                val nextRegularTrigger = alarm.calculateNextTrigger()
+                val updatedAlarm = alarm.copy(
+                    timeMillis = nextRegularTrigger,
+                    enabled = true
                 )
                 viewModelScope.launch {
                     db.alarmDao().update(updatedAlarm)
                     scheduler.scheduleAlarm(getApplication(), updatedAlarm)
                 }
             } else {
-                // For one-time alarms, disable it
-                val updatedAlarm = it.copy(enabled = false)
+                val updatedAlarm = alarm.copy(enabled = false)
                 viewModelScope.launch {
                     db.alarmDao().update(updatedAlarm)
-                    scheduler.cancelAlarm(getApplication(), it.id)
+                    scheduler.cancelAlarm(getApplication(), alarm.id)
                 }
             }
         }

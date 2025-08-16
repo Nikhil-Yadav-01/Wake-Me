@@ -2,38 +2,16 @@ package com.nikhil.wakeme.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -43,8 +21,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +34,6 @@ fun AlarmListScreen(
     viewModel: AlarmListViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    // We still need a repo instance here for onToggle, but not for collecting the list
     val repo = remember { AlarmRepository(context) }
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
@@ -62,7 +41,7 @@ fun AlarmListScreen(
     var hasExactAlarmPermission by remember { mutableStateOf(AlarmScheduler.canScheduleExactAlarms(context)) }
 
     fun requestExactAlarmPermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                 data = Uri.fromParts("package", context.packageName, null)
             }
@@ -84,7 +63,7 @@ fun AlarmListScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(com.nikhil.wakeme.R.drawable.bg),
+                        painter = painterResource(R.drawable.bg),
                         contentDescription = "Home background",
                         contentScale = ContentScale.FillBounds,
                     )
@@ -95,7 +74,7 @@ fun AlarmListScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
-                painter = painterResource(com.nikhil.wakeme.R.drawable.home_bg),
+                painter = painterResource(R.drawable.home_bg),
                 contentDescription = "Home background",
                 contentScale = ContentScale.FillBounds,
                 modifier = Modifier.fillMaxSize()
@@ -106,34 +85,11 @@ fun AlarmListScreen(
                     .padding(padding)
             ) {
                 if (!hasExactAlarmPermission) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Permission Required",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "To ensure alarms work correctly, please grant the permission to schedule exact alarms.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { requestExactAlarmPermission() }) {
-                                Text("Grant Permission", style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-                    }
+                    // Permission Card
                 }
 
-                when (val state = uiState) {
-                    is AlarmListUiState.Loading -> {
+                when (val resource = uiState) {
+                    is Resource.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -141,41 +97,43 @@ fun AlarmListScreen(
                             CircularProgressIndicator()
                         }
                     }
-                    is AlarmListUiState.Success -> {
-                        if (state.alarms.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "No alarms set.",
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    textAlign = TextAlign.Center
+                    is Resource.Success -> {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(resource.data, key = { it.id }) { alarm ->
+                                AlarmItem(
+                                    alarm = alarm,
+                                    onToggle = { enabled ->
+                                        val updatedAlarm = alarm.copy(enabled = enabled)
+                                        scope.launch {
+                                            repo.update(updatedAlarm)
+                                            if (enabled) {
+                                                AlarmScheduler.scheduleAlarm(context, updatedAlarm)
+                                            } else {
+                                                AlarmScheduler.cancelAlarm(context, alarm.id)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        nav.navigate("edit/${alarm.id}")
+                                    }
                                 )
                             }
-                        } else {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(state.alarms, key = { it.id }) { alarm ->
-                                    AlarmItem(
-                                        alarm = alarm,
-                                        onToggle = { enabled ->
-                                            val updatedAlarm = alarm.copy(enabled = enabled)
-                                            scope.launch {
-                                                repo.update(updatedAlarm)
-                                                if (enabled) {
-                                                    AlarmScheduler.scheduleAlarm(context, updatedAlarm)
-                                                } else {
-                                                    AlarmScheduler.cancelAlarm(context, alarm.id)
-                                                }
-                                            }
-                                        },
-                                        onClick = {
-                                            nav.navigate("edit/${alarm.id}")
-                                        }
-                                    )
-                                }
-                            }
                         }
+                    }
+                    is Resource.Empty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No alarms set.",
+                                style = MaterialTheme.typography.headlineLarge,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    is Resource.Error -> {
+                        // Optional: Handle error state
                     }
                 }
             }

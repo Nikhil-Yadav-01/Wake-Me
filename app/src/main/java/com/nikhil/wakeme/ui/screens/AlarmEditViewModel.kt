@@ -7,27 +7,35 @@ import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed interface AlarmEditUiState {
-    data class Success(val alarm: AlarmEntity?) : AlarmEditUiState
-    object Loading : AlarmEditUiState
-}
-
 class AlarmEditViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AlarmRepository(application)
 
-    private val _uiState = MutableStateFlow<AlarmEditUiState>(AlarmEditUiState.Loading)
+    // uiState now emits Resource<AlarmEntity?>
+    private val _uiState = MutableStateFlow<Resource<AlarmEntity?>>(Resource.Loading)
     val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
+        // Reset to Loading every time we load a new alarm or re-load
+        _uiState.value = Resource.Loading
         if (alarmId == 0L) {
-            _uiState.value = AlarmEditUiState.Success(null)
+            _uiState.value = Resource.Success(null) // New alarm, no existing data
         } else {
             viewModelScope.launch {
-                _uiState.value = AlarmEditUiState.Success(repo.getById(alarmId))
+                try {
+                    val alarm = repo.getById(alarmId)
+                    if (alarm != null) {
+                        _uiState.value = Resource.Success(alarm)
+                    } else {
+                        _uiState.value = Resource.Error("Alarm not found") // Handle case where alarm doesn't exist
+                    }
+                } catch (e: Exception) {
+                    _uiState.value = Resource.Error("Failed to load alarm: ${e.message}")
+                }
             }
         }
     }
@@ -42,41 +50,38 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         daysOfWeek: Set<Int>
     ) {
         viewModelScope.launch {
-            val isNewAlarm = alarmId == 0L
-            val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
+            // Optionally, you could set _uiState to Resource.Loading() here as well
+            // to show a saving indicator, but for quick operations, it might flicker.
+            try {
+                val isNewAlarm = alarmId == 0L
+                val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
 
-            // Determine the hour and minute to save as originalHour/Minute.
-            // If it's an existing alarm and the time wasn't changed by the user (not directly passed as new hour/minute),
-            // we should ideally preserve the originalHour/Minute from the existingAlarm.
-            // For simplicity here, we assume hour and minute passed are always the user's latest selection.
-            val hourToSave = hour
-            val minuteToSave = minute
+                val alarmEntity = (existingAlarm ?: AlarmEntity(timeMillis = 0)).copy(
+                    label = label,
+                    snoozeDuration = snoozeDuration,
+                    enabled = true,
+                    ringtoneUri = ringtoneUri?.toString(),
+                    daysOfWeek = daysOfWeek,
+                    originalHour = hour,
+                    originalMinute = minute
+                )
 
-            val alarmEntity = (existingAlarm ?: AlarmEntity(ringTime = 0)).copy(
-                label = label,
-                snoozeDuration = snoozeDuration,
-                enabled = true,
-                ringtoneUri = ringtoneUri?.toString(),
-                daysOfWeek = daysOfWeek,
-                originalHour = hourToSave,
-                originalMinute = minuteToSave
-            )
+                val nextTriggerTime = alarmEntity.calculateNextTrigger()
+                val finalAlarmToSave = alarmEntity.copy(timeMillis = nextTriggerTime)
 
-            // Calculate the initial timeMillis using the robust calculator in AlarmEntity
-            // This ensures the alarm is initially scheduled for the correct next occurrence
-            // based on the original time and daysOfWeek.
-            val nextTriggerTime = alarmEntity.calculateNextTrigger()
-            val finalAlarmToSave = alarmEntity.copy(ringTime = nextTriggerTime)
+                val id = if (isNewAlarm) {
+                    repo.insert(finalAlarmToSave)
+                } else {
+                    repo.update(finalAlarmToSave)
+                    finalAlarmToSave.id
+                }
 
-            val id = if (isNewAlarm) {
-                repo.insert(finalAlarmToSave)
-            } else {
-                repo.update(finalAlarmToSave)
-                finalAlarmToSave.id
+                AlarmScheduler.scheduleAlarm(getApplication(), finalAlarmToSave.copy(id = id))
+                // If you want to reflect the saved state in UI: _uiState.value = Resource.Success(finalAlarmToSave.copy(id = id))
+            } catch (e: Exception) {
+                // Handle save error, e.g., show a Toast or update UI state to Resource.Error
+                // _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
             }
-
-            // Schedule with the final, correct entity (ensuring the ID is set for a new alarm)
-            AlarmScheduler.scheduleAlarm(getApplication(), finalAlarmToSave.copy(id = id))
         }
     }
 }
