@@ -11,6 +11,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
@@ -75,7 +76,12 @@ class AlarmService : Service() {
             @Suppress("DEPRECATION")
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
-        vibrator?.vibrate(longArrayOf(0, 1000, 1000), 0)
+        vibrator?.vibrate(
+            VibrationEffect.createWaveform(
+                longArrayOf(0, 1000, 1000),
+                0
+            )
+        )
     }
 
     private fun stopAlarm() {

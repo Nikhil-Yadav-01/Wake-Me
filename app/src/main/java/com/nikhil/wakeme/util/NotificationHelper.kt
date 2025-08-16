@@ -18,7 +18,7 @@ object NotificationHelper {
 
     // This function creates the channel responsible for *displaying* the alarm UI.
     // It is intentionally silent because the sound will be handled by a foreground service.
-    private fun createSilentChannel(context: Context) {
+    fun createSilentChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channel = NotificationChannel(

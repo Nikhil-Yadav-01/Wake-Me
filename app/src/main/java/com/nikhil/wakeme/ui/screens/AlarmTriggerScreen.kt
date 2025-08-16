@@ -32,8 +32,8 @@ import kotlin.random.Random
 
 @Composable
 fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) {
-    val a = remember { Random.nextInt(1, 12) }
-    val b = remember { Random.nextInt(1, 12) }
+    val a = remember { Random.nextInt(10, 25) }
+    val b = remember { Random.nextInt(10, 25) }
     val answer = a * b
     var input by remember { mutableStateOf("") }
     val context = LocalContext.current
