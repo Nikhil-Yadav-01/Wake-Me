@@ -23,18 +23,19 @@ class AlarmWorker(
         if (alarm.enabled) {
             NotificationHelper.showAlarmNotification(context, alarm)
 
-            // If it's a recurring alarm, reschedule it for the next occurrence
+            // After the alarm fires, we decide what the next trigger time should be.
             if (alarm.daysOfWeek.isNotEmpty()) {
-                val nextTrigger = alarm.calculateNextTrigger()
-                if (alarm.timeMillis != nextTrigger) {
-                    alarm.timeMillis = nextTrigger
-                    db.alarmDao().update(alarm)
-                    AlarmScheduler.scheduleAlarm(context, alarm)
-                }
+                // This is a recurring alarm. We must calculate its next regular occurrence.
+                val nextTriggerMillis = alarm.calculateNextTrigger()
+                val updatedAlarm = alarm.copy(timeMillis = nextTriggerMillis)
+                db.alarmDao().update(updatedAlarm)
+                // Reschedule the alarm for its next regular time.
+                AlarmScheduler.scheduleAlarm(context, updatedAlarm)
             } else {
-                // For one-time alarms, disable it after it fires
-                alarm.enabled = false
-                db.alarmDao().update(alarm)
+                // This is a one-time alarm. It should be disabled after it fires.
+                val updatedAlarm = alarm.copy(enabled = false)
+                db.alarmDao().update(updatedAlarm)
+                // We don't reschedule, as the alarm is now disabled.
             }
         }
 

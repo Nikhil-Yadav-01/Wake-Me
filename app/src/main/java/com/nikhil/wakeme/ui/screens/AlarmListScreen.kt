@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -27,7 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,23 +41,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.nikhil.wakeme.alarms.AlarmScheduler
-import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlarmListScreen(nav: NavController) {
+fun AlarmListScreen(
+    nav: NavController,
+    viewModel: AlarmListViewModel = viewModel()
+) {
     val context = LocalContext.current
+    // We still need a repo instance here for onToggle, but not for collecting the list
     val repo = remember { AlarmRepository(context) }
     val scope = rememberCoroutineScope()
-
-    var alarms by remember { mutableStateOf<List<AlarmEntity>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        repo.getAllFlow().collect { list -> alarms = list }
-    }
+    val uiState by viewModel.uiState.collectAsState()
 
     var hasExactAlarmPermission by remember { mutableStateOf(AlarmScheduler.canScheduleExactAlarms(context)) }
 
@@ -79,8 +80,7 @@ fun AlarmListScreen(nav: NavController) {
                 modifier = Modifier.padding(8.dp)
             ) {
                 Box(
-                    modifier = Modifier.size(
-                        64.dp),
+                    modifier = Modifier.size(64.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -131,37 +131,50 @@ fun AlarmListScreen(nav: NavController) {
                         }
                     }
                 }
-                if (alarms.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "No alarms set.",
-                            style = MaterialTheme.typography.headlineLarge,
-                            textAlign = TextAlign.Center
-                        )
+
+                when (val state = uiState) {
+                    is AlarmListUiState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(alarms, key = { it.id }) { alarm ->
-                            AlarmItem(
-                                    alarm = alarm,
-                                    onToggle = { enabled ->
-                                        val updatedAlarm = alarm.copy(enabled = enabled)
-                                        scope.launch {
-                                            repo.update(updatedAlarm)
-                                            if (enabled) {
-                                                AlarmScheduler.scheduleAlarm(context, updatedAlarm)
-                                            } else {
-                                                AlarmScheduler.cancelAlarm(context, alarm.id)
-                                            }
-                                        }
-                                    },
-                                    onClick = {
-                                        nav.navigate("edit/${alarm.id}")
-                                    }
+                    is AlarmListUiState.Success -> {
+                        if (state.alarms.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "No alarms set.",
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    textAlign = TextAlign.Center
                                 )
+                            }
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(state.alarms, key = { it.id }) { alarm ->
+                                    AlarmItem(
+                                        alarm = alarm,
+                                        onToggle = { enabled ->
+                                            val updatedAlarm = alarm.copy(enabled = enabled)
+                                            scope.launch {
+                                                repo.update(updatedAlarm)
+                                                if (enabled) {
+                                                    AlarmScheduler.scheduleAlarm(context, updatedAlarm)
+                                                } else {
+                                                    AlarmScheduler.cancelAlarm(context, alarm.id)
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            nav.navigate("edit/${alarm.id}")
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

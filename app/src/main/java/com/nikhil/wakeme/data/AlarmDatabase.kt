@@ -14,7 +14,14 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [AlarmEntity::class], version = 2, exportSchema = false)
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE alarms ADD COLUMN originalHour INTEGER")
+        database.execSQL("ALTER TABLE alarms ADD COLUMN originalMinute INTEGER")
+    }
+}
+
+@Database(entities = [AlarmEntity::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AlarmDatabase : RoomDatabase() {
     abstract fun alarmDao(): AlarmDao
@@ -30,7 +37,7 @@ abstract class AlarmDatabase : RoomDatabase() {
                     AlarmDatabase::class.java,
                     "wake_me_alarm_db"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 INSTANCE = inst
                 inst

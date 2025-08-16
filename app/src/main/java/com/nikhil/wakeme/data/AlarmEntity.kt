@@ -12,53 +12,61 @@ data class AlarmEntity(
     var label: String? = null,
     var snoozeDuration: Int = 10, // in minutes
     var daysOfWeek: Set<Int> = emptySet(), // Calendar.MONDAY, Calendar.TUESDAY, etc.
-    var ringtoneUri: String? = null, // New field to store ringtone URI
+    var ringtoneUri: String? = null,
+    // Store the original hour and minute for recurring alarms.
+    // This is set when the alarm is created and should not be updated on snooze.
+    var originalHour: Int? = null,
+    var originalMinute: Int? = null,
     var createdAt: Long = System.currentTimeMillis()
 ) {
     fun calculateNextTrigger(): Long {
         val now = Calendar.getInstance()
-        val alarmTime = Calendar.getInstance().apply {
-            timeInMillis = this@AlarmEntity.timeMillis
+
+        // Use the dedicated originalHour and originalMinute for recurring alarms.
+        val alarmHour = originalHour ?: Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.timeMillis }.get(Calendar.HOUR_OF_DAY)
+        val alarmMinute = originalMinute ?: Calendar.getInstance().apply { timeInMillis = this@AlarmEntity.timeMillis }.get(Calendar.MINUTE)
+
+        if (daysOfWeek.isEmpty()) {
+            // For one-time alarms, after they fire, they should be disabled.
+            // No next trigger calculation is needed. Return the current time to fulfill the function's
+            // contract, but the AlarmWorker is responsible for disabling the alarm.
+            return timeMillis
+        }
+
+        // For recurring alarms, find the next valid day.
+        val nextTriggerCal = Calendar.getInstance().apply {
+            timeInMillis = now.timeInMillis
+            set(Calendar.HOUR_OF_DAY, alarmHour)
+            set(Calendar.MINUTE, alarmMinute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
 
-        if (daysOfWeek.isEmpty()) {
-            // One-time alarm
-            if (alarmTime.before(now)) {
-                alarmTime.add(Calendar.DAY_OF_YEAR, 1)
-            }
-        } else {
-            // Recurring alarm
-            var foundNext = false
-            // Try to find a trigger today or in the near future within a week
-            for (i in 0..7) { // Check today and next 6 days
-                val candidateTime = Calendar.getInstance().apply {
-                    timeInMillis = alarmTime.timeInMillis
-                    add(Calendar.DAY_OF_YEAR, i)
-                }
-                if (daysOfWeek.contains(candidateTime.get(Calendar.DAY_OF_WEEK))) {
-                    // If candidate day is today and time has passed, or any future day
-                    if (candidateTime.after(now)) {
-                        alarmTime.timeInMillis = candidateTime.timeInMillis
-                        foundNext = true
-                        break
-                    } else if (i == 0 && !alarmTime.before(now)) {
-                        // If today and alarm time is now or in future, use it
-                        alarmTime.timeInMillis = candidateTime.timeInMillis
-                        foundNext = true
-                        break
-                    }
-                }
-            }
-            if (!foundNext) {
-                // If no trigger found in the next 7 days, this should ideally not happen
-                // but as a fallback, advance to next day from current alarmTime if it's in the past
-                if (alarmTime.before(now)) {
-                    alarmTime.add(Calendar.DAY_OF_YEAR, 1)
-                }
-            }
+        // If the calculated time for today has already passed, start checking from tomorrow.
+        if (nextTriggerCal.before(now)) {
+            nextTriggerCal.add(Calendar.DAY_OF_YEAR, 1)
         }
-        return alarmTime.timeInMillis
+
+        // Loop for a maximum of 7 days to find the next scheduled day.
+        for (i in 0..7) {
+            val dayOfWeek = nextTriggerCal.get(Calendar.DAY_OF_WEEK)
+            if (daysOfWeek.contains(dayOfWeek)) {
+                // We've found the next valid day and time.
+                return nextTriggerCal.timeInMillis
+            }
+            // Move to the next day and check again.
+            nextTriggerCal.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        // Fallback: This should be unreachable if daysOfWeek is not empty.
+        // It returns the original alarm time set for the next day as a safeguard.
+        val fallbackCal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, alarmHour)
+            set(Calendar.MINUTE, alarmMinute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return fallbackCal.timeInMillis
     }
 }
