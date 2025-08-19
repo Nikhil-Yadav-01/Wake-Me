@@ -116,7 +116,6 @@ private fun AlarmEditContent(
     var customSnoozeValue by remember { mutableStateOf(alarm?.snoozeDuration?.toString() ?: "10") }
 
     var selectedRingtoneUri by remember { mutableStateOf(alarm?.ringtoneUri) }
-    var ringtoneTitle by remember { mutableStateOf(selectedRingtoneUri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) } ?: "Default Ringtone") }
 
     var isWheelPickerVisible by remember { mutableStateOf(false) }
 
@@ -128,8 +127,14 @@ private fun AlarmEditContent(
                 @Suppress("DEPRECATION")
                 result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
             }
+            // Update the selectedRingtoneUri state when a new ringtone is picked
             selectedRingtoneUri = uri
-            ringtoneTitle = uri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) } ?: "Default Ringtone"
+        }
+    }
+
+    var ringtoneTitle by remember { mutableStateOf("Default Ringtone") }
+    LaunchedEffect(selectedRingtoneUri) {
+ ringtoneTitle = selectedRingtoneUri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) } ?: "Default Ringtone"
         }
     }
 
