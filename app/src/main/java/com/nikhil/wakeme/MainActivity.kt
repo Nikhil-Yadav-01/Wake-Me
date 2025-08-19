@@ -75,15 +75,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WakeMeTheme {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Image(
-                        painter = painterResource(id = R.drawable.home_bg),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    AlarmNavHost()
-                }
+                AlarmNavHost()
             }
         }
     }

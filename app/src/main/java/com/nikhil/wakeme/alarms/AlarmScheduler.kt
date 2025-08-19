@@ -83,8 +83,6 @@ object AlarmScheduler {
         val workManager = WorkManager.getInstance(context)
         val workTag = "$ALARM_WORK_TAG_PREFIX${alarm.id}"
 
-        // No need to cancel WorkManager tasks here as cancelExistingAlarmTriggers is called in scheduleAlarm
-
         val alarmData = Data.Builder()
             .putLong(EXTRA_ALARM_ID, alarm.id)
             .build()

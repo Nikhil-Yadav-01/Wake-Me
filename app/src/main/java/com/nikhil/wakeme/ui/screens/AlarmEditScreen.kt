@@ -7,9 +7,12 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
@@ -18,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,16 +31,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.util.Resource
@@ -48,7 +50,7 @@ import kotlin.math.abs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmEditScreen(
-    navController: NavController,
+    goBack : () -> Unit,
     alarmId: Long,
     viewModel: AlarmEditViewModel = viewModel()
 ) {
@@ -67,9 +69,8 @@ fun AlarmEditScreen(
             painter = painterResource(id = R.drawable.set_alarm_bg),
             contentDescription = "Background",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.matchParentSize(),
         )
-
         when (val resource = uiState) {
             is Resource.Loading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -80,14 +81,14 @@ fun AlarmEditScreen(
                     alarmId = alarmId,
                     onSave = { hour, minute, label, snooze, ringtoneUri, days ->
                         viewModel.saveAlarm(alarmId, hour, minute, label, snooze, ringtoneUri, days)
-                        navController.popBackStack()
+                        goBack()
                     }
                 )
             }
             is Resource.Error -> {
                 Toast.makeText(LocalContext.current, resource.message, Toast.LENGTH_SHORT).show()
             }
-            is Resource.Empty -> {
+            else -> {
             }
         }
     }
@@ -98,7 +99,7 @@ fun AlarmEditScreen(
 private fun AlarmEditContent(
     alarm: Alarm?,
     alarmId: Long,
-    onSave: (Int, Int, String, Int, Uri?, Set<Int>) -> Unit
+    onSave: (Int, Int, String?, Int, Uri?, Set<Int>) -> Unit
 ) {
     val context = LocalContext.current
     val isNewAlarm = alarmId == 0L
@@ -110,7 +111,7 @@ private fun AlarmEditContent(
     var hour by remember { mutableStateOf(initialHour) }
     var minute by remember { mutableStateOf(initialMinute) }
 
-    var label by remember { mutableStateOf(alarm?.label ?: "") }
+    var label by remember { mutableStateOf(alarm?.label) }
     var selectedSnoozeOption by remember { mutableStateOf(if (alarm?.snoozeDuration in listOf(5, 10, 15)) alarm?.snoozeDuration.toString() else "Custom") }
     var customSnoozeValue by remember { mutableStateOf(alarm?.snoozeDuration?.toString() ?: "10") }
 
@@ -148,120 +149,155 @@ private fun AlarmEditContent(
                 }
             )
         },
-        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { padding ->
-        Column(
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .navigationBarsPadding()
         ) {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                androidx.compose.animation.AnimatedVisibility(visible = !isWheelPickerVisible) {
-                    val timePickerState = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
-                    LaunchedEffect(timePickerState.hour, timePickerState.minute) {
-                        hour = timePickerState.hour
-                        minute = timePickerState.minute
-                    }
-                    TimePicker(state = timePickerState)
-                }
-
-                androidx.compose.animation.AnimatedVisibility(visible = isWheelPickerVisible) {
-                    TimePickerWheel(
-                        hour = hour,
-                        minute = minute,
-                        onHourChange = { hour = it },
-                        onMinuteChange = { minute = it }
-                    )
-                }
-            }
-
-            IconButton(onClick = { isWheelPickerVisible = !isWheelPickerVisible }) {
-                Icon(Icons.Default.SwapHoriz, contentDescription = "Swap Time Picker Style")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedTextField(
-                value = label,
-                onValueChange = { label = it },
-                label = { Text("Alarm Name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+            Image(
+                painter = painterResource(id = R.drawable.set_alarm_bg),
+                contentDescription = "Background",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Repeat", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            DayOfWeekSelector(
-                selectedDays = selectedDays,
-                onDaySelected = { day, isSelected ->
-                    selectedDays = if (isSelected) {
-                        selectedDays + day
-                    } else {
-                        selectedDays - day
-                    }
-                }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Snooze Duration", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val snoozeOptions = listOf("5", "10", "15", "Custom")
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                items(snoozeOptions) { duration ->
-                    FilterChip(
-                        selected = selectedSnoozeOption == duration,
-                        onClick = { selectedSnoozeOption = duration },
-                        label = { Text(if (duration == "Custom") "Custom" else "$duration min") }
-                    )
-                }
-            }
-
-            if (selectedSnoozeOption == "Custom") {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = customSnoozeValue,
-                    onValueChange = { customSnoozeValue = it.filter(Char::isDigit) },
-                    label = { Text("Custom Snooze (minutes)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(200.dp),
-                    singleLine = true
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Box(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Alarm Ringtone")
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                            selectedRingtoneUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it) }
-                        }
-                        ringtonePickerLauncher.launch(intent)
-                    }
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    androidx.compose.animation.AnimatedVisibility(visible = !isWheelPickerVisible) {
+                        val timePickerState = rememberTimePickerState(
+                            initialHour = hour,
+                            initialMinute = minute,
+                            is24Hour = true
+                        )
+                        LaunchedEffect(timePickerState.hour, timePickerState.minute) {
+                            hour = timePickerState.hour
+                            minute = timePickerState.minute
+                        }
+                        TimePicker(state = timePickerState)
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(visible = isWheelPickerVisible) {
+                        TimePickerWheel(
+                            hour = hour,
+                            minute = minute,
+                            onHourChange = { hour = it },
+                            onMinuteChange = { minute = it }
+                        )
+                    }
+                }
+
+                IconButton(onClick = { isWheelPickerVisible = !isWheelPickerVisible }) {
+                    Icon(Icons.Default.SwapHoriz, contentDescription = "Swap Time Picker Style")
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 OutlinedTextField(
-                    value = ringtoneTitle,
-                    onValueChange = {},
-                    label = { Text("Ringtone") },
-                    enabled = false,
-                    leadingIcon = { Icon(Icons.Default.MusicNote, contentDescription = "Ringtone") },
+                    value = label ?: "",
+                    onValueChange = { label = it },
+                    label = { Text("Alarm Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = MaterialTheme.colorScheme.onSurface),
                     singleLine = true
                 )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text("Repeat", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                DayOfWeekSelector(
+                    selectedDays = selectedDays,
+                    onDaySelected = { day, isSelected ->
+                        selectedDays = if (isSelected) {
+                            selectedDays + day
+                        } else {
+                            selectedDays - day
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text("Snooze Duration", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val snoozeOptions = listOf("5", "10", "15", "Custom")
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(snoozeOptions) { duration ->
+                        FilterChip(
+                            selected = selectedSnoozeOption == duration,
+                            onClick = { selectedSnoozeOption = duration },
+                            label = { Text(if (duration == "Custom") "Custom" else "$duration min") }
+                        )
+                    }
+                }
+
+                if (selectedSnoozeOption == "Custom") {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = customSnoozeValue,
+                        onValueChange = { customSnoozeValue = it.filter(Char::isDigit) },
+                        label = { Text("Custom Snooze (minutes)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(200.dp),
+                        singleLine = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(
+                                    RingtoneManager.EXTRA_RINGTONE_TYPE,
+                                    RingtoneManager.TYPE_ALARM
+                                )
+                                putExtra(
+                                    RingtoneManager.EXTRA_RINGTONE_TITLE,
+                                    "Select Alarm Ringtone"
+                                )
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                selectedRingtoneUri?.let {
+                                    putExtra(
+                                        RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+                                        it
+                                    )
+                                }
+                            }
+                            ringtonePickerLauncher.launch(intent)
+                        }
+                ) {
+                    OutlinedTextField(
+                        value = ringtoneTitle,
+                        onValueChange = {},
+                        label = { Text("Ringtone") },
+                        enabled = false,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.MusicNote,
+                                contentDescription = "Ringtone"
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(disabledTextColor = MaterialTheme.colorScheme.onSurface),
+                        singleLine = true
+                    )
+                }
             }
         }
     }
@@ -333,12 +369,14 @@ fun NumberWheel(
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = value)
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
 
+    // Ensure it snaps correctly to value
     LaunchedEffect(range, value) {
         if (listState.firstVisibleItemIndex != value) {
             listState.scrollToItem(value)
         }
     }
 
+    // Collect selected index when scrolling stops
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }
             .filter { !it }
@@ -353,29 +391,51 @@ fun NumberWheel(
             }
     }
 
-    LazyColumn(
-        state = listState,
-        flingBehavior = flingBehavior,
-        modifier = modifier.height(120.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        contentPadding = PaddingValues(vertical = 40.dp)
+    Box(
+        modifier = modifier
+            .height(150.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)) // subtle background
     ) {
-        items(range.last - range.first + 1) { index ->
-            Text(
-                text = "%02d".format(range.start + index),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+        LazyColumn(
+            state = listState,
+            flingBehavior = flingBehavior,
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(vertical = 50.dp)
+        ) {
+            items(range.last - range.first + 1) { index ->
+                val number = range.start + index
+
+                // Figure out if it's the "centered" item
+                val distanceFromCenter = index - listState.firstVisibleItemIndex
+                val isSelected = number == value
+
+                val textAlpha by animateFloatAsState(if (isSelected) 1f else 0.4f, label = "alpha")
+                val textSize by animateDpAsState(if (isSelected) 32.dp else 20.dp, label = "size")
+
+                Text(
+                    text = "%02d".format(number),
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = with(LocalDensity.current) { textSize.toSp() }
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = textAlpha),
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+            }
         }
+
+        // Highlight bar at the center (like iOS style wheel)
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .height(40.dp)
+                .border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+        )
     }
-}
-
-
-@Preview
-@Composable
-fun EditPreview() {
-    AlarmEditScreen(
-        navController = rememberNavController(),
-        alarmId = 1L,
-    )
 }

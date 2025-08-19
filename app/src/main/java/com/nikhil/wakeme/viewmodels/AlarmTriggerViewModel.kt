@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 class AlarmTriggerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AlarmDatabase.getInstance(application)
-    private val _uiState = MutableStateFlow<Resource<AlarmEntity>>(Resource.Loading())
+    private val _uiState = MutableStateFlow<Resource<AlarmEntity>>(Resource.Initial())
     val uiState = _uiState.asStateFlow()
     private val scheduler = AlarmScheduler
 

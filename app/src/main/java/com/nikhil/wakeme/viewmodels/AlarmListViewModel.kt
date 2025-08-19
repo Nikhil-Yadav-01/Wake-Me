@@ -26,6 +26,6 @@ class AlarmListViewModel(application: Application) : AndroidViewModel(applicatio
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Companion.WhileSubscribed(5000),
-            initialValue = Resource.Loading()
+            initialValue = Resource.Initial()
         )
 }

@@ -10,14 +10,27 @@ import androidx.navigation.navArgument
 @Composable
 fun AlarmNavHost() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "list") {
-        composable("list") { AlarmListScreen(navController) }
+    NavHost(navController = navController, startDestination = Routes.LIST) {
+        composable(Routes.LIST) {
+            AlarmListScreen(
+                onItemClick = { id ->
+                    navController.navigate(Routes.edit(id))
+                }
+            )
+        }
         composable(
-            "edit/{alarmId}",
+            Routes.EDIT,
             arguments = listOf(navArgument("alarmId") { type = NavType.LongType })
         ) { backStackEntry ->
             val alarmId = backStackEntry.arguments?.getLong("alarmId") ?: 0L
-            AlarmEditScreen(navController, alarmId)
+            AlarmEditScreen(goBack = { navController.popBackStack() }, alarmId = alarmId)
         }
     }
+}
+
+// Routes
+data object Routes {
+    const val LIST = "list"
+    const val EDIT = "edit/{alarmId}"
+    fun edit(alarmId: Long) = "edit/$alarmId"
 }

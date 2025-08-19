@@ -6,19 +6,17 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.Alarm
-import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.data.toAlarmEntity
 import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 class AlarmEditViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AlarmRepository(application)
 
-    private val _uiState = MutableStateFlow<Resource<Alarm?>>(Resource.Loading())
+    private val _uiState = MutableStateFlow<Resource<Alarm?>>(Resource.Initial())
     val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
@@ -45,7 +43,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         alarmId: Long,
         hour: Int,
         minute: Int,
-        label: String,
+        label: String?,
         snoozeDuration: Int,
         ringtoneUri: Uri?,
         daysOfWeek: Set<Int>

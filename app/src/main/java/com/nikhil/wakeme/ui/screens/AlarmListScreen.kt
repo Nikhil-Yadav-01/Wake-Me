@@ -24,9 +24,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
-import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.data.toAlarmEntity // Import the extension function
+import com.nikhil.wakeme.data.toAlarmEntity
 import com.nikhil.wakeme.util.Resource
 import com.nikhil.wakeme.viewmodels.AlarmListViewModel
 import kotlinx.coroutines.launch
@@ -34,7 +33,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmListScreen(
-    nav: NavController,
+    onItemClick: (Long) -> Unit,
     viewModel: AlarmListViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -59,7 +58,9 @@ fun AlarmListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { nav.navigate("edit/0") },
+                onClick = {
+                    onItemClick(0L)
+                          },
                 modifier = Modifier.padding(8.dp)
             ) {
                 Box(
@@ -78,7 +79,7 @@ fun AlarmListScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
-                painter = painterResource(R.drawable.home_bg),
+                painter = painterResource(R.drawable.alarm_home_bg),
                 contentDescription = "Home background",
                 contentScale = ContentScale.FillBounds,
                 modifier = Modifier.fillMaxSize()
@@ -120,7 +121,7 @@ fun AlarmListScreen(
                                             }
                                         },
                                         onClick = {
-                                            nav.navigate("edit/${alarm.id}")
+                                            onItemClick(alarm.id)
                                         }
                                     )
                                 }
@@ -142,6 +143,10 @@ fun AlarmListScreen(
 
                         is Resource.Error -> {
                             Toast.makeText(context, resource.message, Toast.LENGTH_SHORT).show()
+                        }
+                        
+                        else -> {
+                            
                         }
                     }
                 } else {
