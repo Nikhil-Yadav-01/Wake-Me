@@ -337,24 +337,42 @@ fun TimePickerWheel(
     onHourChange: (Int) -> Unit,
     onMinuteChange: (Int) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(24.dp)),
+        contentAlignment = Alignment.Center
     ) {
-        NumberWheel(
-            range = 0..23,
-            value = hour,
-            onValueChange = onHourChange,
-            modifier = Modifier.width(100.dp)
-        )
-        Text(":", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(horizontal = 8.dp))
-        NumberWheel(
-            range = 0..59,
-            value = minute,
-            onValueChange = onMinuteChange,
-            modifier = Modifier.width(100.dp)
-        )
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Hour wheel
+            NumberWheel(
+                range = 0..23,
+                value = hour,
+                onValueChange = onHourChange,
+                modifier = Modifier.width(100.dp)
+            )
+
+            // Fancy colon
+            Text(
+                ":",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            // Minute wheel
+            NumberWheel(
+                range = 0..59,
+                value = minute,
+                onValueChange = onMinuteChange,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+
     }
 }
 
