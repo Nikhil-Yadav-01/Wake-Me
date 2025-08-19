@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
+import androidx.compose.material3.*H
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +24,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
+import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.data.toAlarmEntity // Import the extension function
 import com.nikhil.wakeme.util.Resource
 import com.nikhil.wakeme.viewmodels.AlarmListViewModel
 import kotlinx.coroutines.launch
@@ -103,13 +105,14 @@ fun AlarmListScreen(
                                     AlarmItem(
                                         alarm = alarm,
                                         onToggle = { enabled ->
-                                            val updatedAlarm = alarm.copy(enabled = enabled)
+                                            val updatedAlarm = alarm.copy(enabled = enabled) // This is an Alarm object
                                             scope.launch {
-                                                repo.update(updatedAlarm)
+                                                // Need to convert back to AlarmEntity for repo operations
+                                                repo.update(updatedAlarm.toAlarmEntity()) 
                                                 if (enabled) {
                                                     AlarmScheduler.scheduleAlarm(
                                                         context,
-                                                        updatedAlarm
+                                                        updatedAlarm.toAlarmEntity() // Schedule with AlarmEntity
                                                     )
                                                 } else {
                                                     AlarmScheduler.cancelAlarm(context, alarm.id)

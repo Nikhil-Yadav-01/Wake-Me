@@ -36,7 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.nikhil.wakeme.R
-import com.nikhil.wakeme.data.AlarmEntity
+import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.util.Resource
 import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
 import kotlinx.coroutines.flow.filter
@@ -94,7 +94,7 @@ fun AlarmEditScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AlarmEditContent(
-    alarm: AlarmEntity?,
+    alarm: Alarm?,
     alarmId: Long,
     onSave: (Int, Int, String, Int, Uri?, Set<Int>) -> Unit
 ) {
@@ -102,8 +102,8 @@ private fun AlarmEditContent(
     val isNewAlarm = alarmId == 0L
 
     val calendar = Calendar.getInstance()
-    val initialHour = alarm?.originalHour ?: calendar.get(Calendar.HOUR_OF_DAY)
-    val initialMinute = alarm?.originalMinute ?: calendar.get(Calendar.MINUTE)
+    val initialHour = alarm?.hour ?: calendar.get(Calendar.HOUR_OF_DAY)
+    val initialMinute = alarm?.minute ?: calendar.get(Calendar.MINUTE)
 
     var hour by remember { mutableStateOf(initialHour) }
     var minute by remember { mutableStateOf(initialMinute) }
@@ -112,7 +112,7 @@ private fun AlarmEditContent(
     var selectedSnoozeOption by remember { mutableStateOf(if (alarm?.snoozeDuration in listOf(5, 10, 15)) alarm?.snoozeDuration.toString() else "Custom") }
     var customSnoozeValue by remember { mutableStateOf(alarm?.snoozeDuration?.toString() ?: "10") }
 
-    var selectedRingtoneUri by remember { mutableStateOf(alarm?.ringtoneUri?.toUri()) }
+    var selectedRingtoneUri by remember { mutableStateOf(alarm?.ringtoneUri) }
     var ringtoneTitle by remember { mutableStateOf(selectedRingtoneUri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) } ?: "Default Ringtone") }
 
     var isWheelPickerVisible by remember { mutableStateOf(false) }

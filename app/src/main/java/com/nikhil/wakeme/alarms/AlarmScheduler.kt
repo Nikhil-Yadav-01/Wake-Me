@@ -41,6 +41,13 @@ object AlarmScheduler {
         val workManager = WorkManager.getInstance(context)
         val workTag = "$ALARM_WORK_TAG_PREFIX$alarmId"
         workManager.cancelAllWorkByTag(workTag)
+
+        // Explicitly stop the AlarmService and dismiss its notification when an alarm is cancelled
+        val serviceIntent = Intent(context, AlarmService::class.java).apply {
+            action = AlarmService.ACTION_STOP
+            putExtra("ALARM_ID", alarmId)
+        }
+        context.stopService(serviceIntent)
     }
 
     fun scheduleAlarm(context: Context, alarm: AlarmEntity) {

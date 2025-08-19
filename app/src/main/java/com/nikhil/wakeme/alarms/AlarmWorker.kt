@@ -5,7 +5,6 @@ import android.content.Intent
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.nikhil.wakeme.data.AlarmDatabase
-import com.nikhil.wakeme.util.NotificationHelper
 
 class AlarmWorker(
     private val context: Context,
@@ -22,17 +21,14 @@ class AlarmWorker(
         val alarm = db.alarmDao().getById(alarmId) ?: return Result.failure()
 
         if (alarm.enabled) {
-            // 1. Show the full-screen UI
-            NotificationHelper.showAlarmNotification(context, alarm)
-
-            // 2. Start the foreground service to play the sound
+            // Start the foreground service to play the sound and show the notification
             val serviceIntent = Intent(context, AlarmService::class.java).apply {
                 action = AlarmService.ACTION_START
                 putExtra("ALARM_ID", alarm.id)
             }
             context.startService(serviceIntent)
 
-            // 3. Reschedule or disable the alarm for the future
+            // Reschedule or disable the alarm for the future
             if (alarm.daysOfWeek.isNotEmpty()) {
                 val nextTriggerMillis = alarm.calculateNextTrigger()
                 val updatedAlarm = alarm.copy(ringTime = nextTriggerMillis)

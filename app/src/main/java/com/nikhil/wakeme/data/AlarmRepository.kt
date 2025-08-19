@@ -2,13 +2,14 @@ package com.nikhil.wakeme.data
 
 import android.content.Context
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class AlarmRepository(context: Context) {
     private val db = AlarmDatabase.getInstance(context)
     private val dao = db.alarmDao()
 
-    fun getAllFlow(): Flow<List<AlarmEntity>> = dao.getAllFlow()
-    fun getEnabledFlow(): Flow<List<AlarmEntity>> = dao.getEnabledAlarmsFlow()
+    fun getAllFlow(): Flow<List<Alarm>> = dao.getAllFlow().map { it.map(AlarmEntity::toAlarm) }
+    fun getEnabledFlow(): Flow<List<Alarm>> = dao.getEnabledAlarmsFlow().map { it.map(AlarmEntity::toAlarm) }
 
     suspend fun insert(alarm: AlarmEntity): Long {
         return dao.insert(alarm)
@@ -22,6 +23,6 @@ class AlarmRepository(context: Context) {
         dao.delete(alarm)
     }
 
-    suspend fun getById(id: Long): AlarmEntity? = dao.getById(id)
-    suspend fun getEnabledList(): List<AlarmEntity> = dao.getEnabledAlarmsList()
+    suspend fun getById(id: Long): Alarm? = dao.getById(id)?.toAlarm()
+    suspend fun getEnabledList(): List<Alarm> = dao.getEnabledAlarmsList().map(AlarmEntity::toAlarm)
 }

@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
+import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmEntity
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.data.toAlarmEntity
 import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +18,7 @@ import java.util.Calendar
 class AlarmEditViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AlarmRepository(application)
 
-    private val _uiState = MutableStateFlow<Resource<AlarmEntity?>>(Resource.Loading())
+    private val _uiState = MutableStateFlow<Resource<Alarm?>>(Resource.Loading())
     val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
@@ -51,42 +53,36 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             try {
                 val isNewAlarm = alarmId == 0L
+                // existingAlarm will be of type Alarm?
                 val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
 
-                // Calculate the initial ring time based on the selected hour and minute
-                val calendar = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, hour)
-                    set(Calendar.MINUTE, minute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                    // If the time is in the past, move it to the next day
-                    if (before(Calendar.getInstance())) {
-                        add(Calendar.DAY_OF_MONTH, 1)
-                    }
-                }
-
-                val alarmEntity = (existingAlarm ?: AlarmEntity(ringTime = calendar.timeInMillis)).copy(
+                // Create an Alarm object from the current UI state
+                val currentAlarm = Alarm(
+                    id = existingAlarm?.id ?: 0L,
+                    hour = hour,
+                    minute = minute,
                     label = label,
                     snoozeDuration = snoozeDuration,
-                    enabled = true,
-                    ringtoneUri = ringtoneUri?.toString(),
+                    enabled = true, // Alarms are enabled on save
+                    ringtoneUri = ringtoneUri,
                     daysOfWeek = daysOfWeek,
-                    originalHour = hour,
-                    originalMinute = minute
+                    originalHour = hour, // Set originalHour and originalMinute from the UI input
+                    originalMinute = minute,
+                    createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis()
                 )
 
-                // The calculateNextTrigger function will handle the logic for repeating alarms
-                val nextTriggerTime = alarmEntity.calculateNextTrigger()
-                val finalAlarmToSave = alarmEntity.copy(ringTime = nextTriggerTime)
+                // Convert the Alarm object to AlarmEntity for database operations
+                val alarmEntityToSave = currentAlarm.toAlarmEntity()
 
                 val id = if (isNewAlarm) {
-                    repo.insert(finalAlarmToSave)
+                    repo.insert(alarmEntityToSave)
                 } else {
-                    repo.update(finalAlarmToSave)
-                    finalAlarmToSave.id
+                    repo.update(alarmEntityToSave)
+                    alarmEntityToSave.id
                 }
 
-                AlarmScheduler.scheduleAlarm(getApplication(), finalAlarmToSave.copy(id = id))
+                // Schedule the alarm using the AlarmEntity (which has the correct ringTime)
+                AlarmScheduler.scheduleAlarm(getApplication(), alarmEntityToSave.copy(id = id))
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
             }
