@@ -13,7 +13,7 @@ data class AlarmEntity(
     var snoozeDuration: Int = 10, // in minutes
     var daysOfWeek: Set<Int> = emptySet(), // Calendar.MONDAY, Calendar.TUESDAY, etc.
     var ringtoneUri: String? = null,
-    var ringtoneTitle: String? = null,
+    var ringtoneTitle: String,
     var originalHour: Int? = null,
     var originalMinute: Int? = null,
     var upcomingShown: Boolean = false,

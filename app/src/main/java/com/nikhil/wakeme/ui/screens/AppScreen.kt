@@ -100,7 +100,7 @@ fun <T> AppScreen(
                 ) {
                     Text(
                         text = "No alarms available",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

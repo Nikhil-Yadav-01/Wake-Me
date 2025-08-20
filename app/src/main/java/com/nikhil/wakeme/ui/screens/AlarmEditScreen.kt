@@ -6,20 +6,11 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -27,11 +18,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -39,28 +27,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.ui.components.AppScreen
+import com.nikhil.wakeme.ui.components.DayOfWeekSelector
 import com.nikhil.wakeme.ui.components.ErrorMode
+import com.nikhil.wakeme.ui.components.GradientSectionCard
+import com.nikhil.wakeme.ui.components.TimePickerWheel
 import com.nikhil.wakeme.util.Resource
+import com.nikhil.wakeme.util.gradients
 import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Calendar
-import kotlin.math.abs
-
-// Gradient util
-fun gradientBrush(colors: List<Color>) = Brush.linearGradient(colors)
-
-private val gradients = listOf(Color(0xFFFFC371), Color(0xFF9D00FF))
-
-val days = listOf("S", "M", "T", "W", "T", "F", "S")
-val calendarDays = listOf(
-    Calendar.SUNDAY,
-    Calendar.MONDAY,
-    Calendar.TUESDAY,
-    Calendar.WEDNESDAY,
-    Calendar.THURSDAY,
-    Calendar.FRIDAY,
-    Calendar.SATURDAY
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +49,9 @@ fun AlarmEditScreen(
     val isNewAlarm = alarmId == 0L
 
     // Load alarm
-    LaunchedEffect(alarmId) { viewModel.loadAlarm(alarmId) }
+    LaunchedEffect(alarmId) {
+        if (isNewAlarm) viewModel.loadAlarm(alarmId)
+    }
 
     Scaffold(
         topBar = {
@@ -138,7 +116,7 @@ private fun AlarmEditContent(
     onSave: (Int, Int, String, Int, Uri?, Set<Int>) -> Unit
 ) {
     val context = LocalContext.current
-    val calendar = remember { Calendar.getInstance() }
+    val calendar = Calendar.getInstance()
 
     var hour by remember { mutableStateOf(alarm?.hour ?: calendar.get(Calendar.HOUR_OF_DAY)) }
     var minute by remember { mutableStateOf(alarm?.minute ?: calendar.get(Calendar.MINUTE)) }
@@ -164,13 +142,27 @@ private fun AlarmEditContent(
                 @Suppress("DEPRECATION")
                 result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
             }
-            ringtoneUri = uri
+            if (uri != null) {
+                ringtoneUri = uri
+            }
         }
     }
 
     // Ringtone title is derived directly from URI (no separate state needed)
-    val ringtoneTitle = ringtoneUri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) }
-        ?: "Default Ringtone"
+    var ringtoneTitle by remember { mutableStateOf("Default Ringtone") }
+
+    LaunchedEffect(ringtoneUri) {
+        ringtoneTitle = withContext(Dispatchers.IO) {
+            try {
+                ringtoneUri?.let { uri ->
+                    RingtoneManager.getRingtone(context, uri)?.getTitle(context)
+                } ?: "Default Ringtone"
+            } catch (e: Exception) {
+                "Default Ringtone"
+            }
+        }
+    }
+
 
     Column(
         modifier = Modifier
@@ -263,7 +255,10 @@ private fun AlarmEditContent(
                     .fillMaxWidth()
                     .clickable {
                         val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                            putExtra(
+                                RingtoneManager.EXTRA_RINGTONE_TYPE,
+                                RingtoneManager.TYPE_ALARM
+                            )
                             putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Alarm Ringtone")
                             putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
                             putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
@@ -293,159 +288,3 @@ private fun AlarmEditContent(
     }
 }
 
-// --- Gradient Section Card ---
-@Composable
-fun GradientSectionCard(
-    colors: List<Color>, title: String? = null, content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .border(2.dp, gradientBrush(colors), RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
-            title?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            content()
-        }
-    }
-}
-
-@Composable
-fun DayOfWeekSelector(selectedDays: Set<Int>, onDaySelected: (Int, Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        days.forEachIndexed { index, dayLabel ->
-            val calendarDay = calendarDays[index]
-            val isSelected = selectedDays.contains(calendarDay)
-            ElevatedFilterChip(
-                selected = isSelected,
-                onClick = { onDaySelected(calendarDay, !isSelected) },
-                label = { Text(dayLabel) },
-                colors = FilterChipDefaults.elevatedFilterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    selectedLabelColor = MaterialTheme.colorScheme.onTertiary
-                )
-            )
-        }
-    }
-}
-
-// --- Enhanced TimePickerWheel ---
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun TimePickerWheel(
-    hour: Int, minute: Int, onHourChange: (Int) -> Unit, onMinuteChange: (Int) -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .border(2.dp, gradientBrush(gradients), RoundedCornerShape(24.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            NumberWheel(
-                range = 0..23,
-                value = hour,
-                onValueChange = onHourChange,
-                modifier = Modifier.width(100.dp)
-            )
-            Text(
-                ":",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-            NumberWheel(
-                range = 0..59,
-                value = minute,
-                onValueChange = onMinuteChange,
-                modifier = Modifier.width(100.dp)
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun NumberWheel(
-    range: IntRange, value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier
-) {
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = value)
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-
-    LaunchedEffect(range, value) {
-        if (listState.firstVisibleItemIndex != value) listState.scrollToItem(value)
-    }
-
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }.filter { !it }.collect {
-            val centerItemInfo =
-                listState.layoutInfo.visibleItemsInfo.minByOrNull { abs(it.offset) }
-            if (centerItemInfo != null) {
-                val newValue = centerItemInfo.index
-                if (newValue != value) onValueChange(newValue)
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .height(150.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.15f))
-    ) {
-        LazyColumn(
-            state = listState,
-            flingBehavior = flingBehavior,
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(vertical = 50.dp)
-        ) {
-            items(range.last - range.first + 1) { index ->
-                val number = range.start + index
-                val isSelected = number == value
-                val textAlpha by animateFloatAsState(if (isSelected) 1f else 0.4f, label = "alpha")
-                val textSize by animateDpAsState(if (isSelected) 32.dp else 20.dp, label = "size")
-
-                Text(
-                    text = "%02d".format(number),
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontSize = with(LocalDensity.current) { textSize.toSp() }),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = textAlpha),
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .height(40.dp)
-                .border(
-                    2.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    RoundedCornerShape(12.dp)
-                )
-        )
-    }
-}

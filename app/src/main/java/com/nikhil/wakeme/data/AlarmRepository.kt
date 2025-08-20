@@ -9,7 +9,6 @@ class AlarmRepository(context: Context) {
     private val dao = db.alarmDao()
 
     fun getAllFlow(): Flow<List<Alarm>> = dao.getAllFlow().map { it.map(AlarmEntity::toAlarm) }
-    fun getEnabledFlow(): Flow<List<Alarm>> = dao.getEnabledAlarmsFlow().map { it.map(AlarmEntity::toAlarm) }
 
     suspend fun insert(alarm: AlarmEntity): Long {
         return dao.insert(alarm)
@@ -24,5 +23,4 @@ class AlarmRepository(context: Context) {
     }
 
     suspend fun getById(id: Long): Alarm? = dao.getById(id)?.toAlarm()
-    suspend fun getEnabledList(): List<Alarm> = dao.getEnabledAlarmsList().map(AlarmEntity::toAlarm)
 }

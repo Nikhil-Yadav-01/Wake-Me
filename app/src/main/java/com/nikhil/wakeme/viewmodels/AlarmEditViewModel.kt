@@ -10,9 +10,11 @@ import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.data.toAlarmEntity
 import com.nikhil.wakeme.util.Resource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AlarmEditViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AlarmRepository(application)
@@ -22,12 +24,14 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadAlarm(alarmId: Long) {
         _uiState.value = Resource.Loading()
+
         if (alarmId == 0L) {
             _uiState.value = Resource.Success(null)
         } else {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val alarm = repo.getById(alarmId)
+
                     if (alarm != null) {
                         _uiState.value = Resource.Success(
                             alarm.copy(
@@ -37,6 +41,7 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                     } else {
                         _uiState.value = Resource.Error("Alarm not found")
                     }
+
                 } catch (e: Exception) {
                     _uiState.value = Resource.Error("Failed to load alarm: ${e.message}")
                 }
@@ -53,10 +58,15 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         ringtoneUri: Uri?,
         daysOfWeek: Set<Int>
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val isNewAlarm = alarmId == 0L
-                val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
+
+                val existingAlarm = withContext(Dispatchers.IO) {
+                    if (!isNewAlarm) repo.getById(alarmId) else null
+                }
+
+                val ringtoneTitle = resolveRingtoneTitle(ringtoneUri)
 
                 val currentAlarm = Alarm(
                     id = existingAlarm?.id ?: 0L,
@@ -71,47 +81,55 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                     originalMinute = minute,
                     createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis(),
                     upcomingShown = false,
-                    ringtoneTitle = resolveRingtoneTitle(ringtoneUri) // <-- inject here
+                    ringtoneTitle = ringtoneTitle
                 )
 
-                val alarmEntityToSave = currentAlarm.toAlarmEntity()
-
-                val id = if (isNewAlarm) {
-                    repo.insert(alarmEntityToSave)
-                } else {
-                    repo.update(alarmEntityToSave)
-                    alarmEntityToSave.id
+                val id = withContext(Dispatchers.IO) {
+                    val alarmEntityToSave = currentAlarm.toAlarmEntity()
+                    if (isNewAlarm) {
+                        repo.insert(alarmEntityToSave)
+                    } else {
+                        repo.update(alarmEntityToSave)
+                        alarmEntityToSave.id
+                    }
                 }
 
                 // schedule alarm
-                AlarmScheduler.scheduleAlarm(getApplication(), alarmEntityToSave.copy(id = id))
-
-                // push back into UI
+                AlarmScheduler.scheduleAlarm(
+                    getApplication(),
+                    currentAlarm.toAlarmEntity().copy(id = id)
+                )
                 _uiState.value = Resource.Success(currentAlarm.copy(id = id))
+
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
+
             }
         }
     }
 
     fun deleteAlarm(alarm: Alarm) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 repo.delete(alarm.toAlarmEntity())
                 AlarmScheduler.cancelAlarm(getApplication(), alarm.id)
+
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to delete alarm: ${e.message}")
+
             }
         }
     }
 
-    private fun resolveRingtoneTitle(uri: Uri?): String {
-        return try {
-            uri?.let {
-                RingtoneManager.getRingtone(getApplication(), it)?.getTitle(getApplication())
-            } ?: "Default Ringtone"
-        } catch (_: Exception) {
-            "Default Ringtone"
+    private suspend fun resolveRingtoneTitle(uri: Uri?): String =
+        withContext(Dispatchers.IO) {
+            try {
+                uri?.let {
+                    RingtoneManager.getRingtone(getApplication(), it)
+                        ?.getTitle(getApplication())
+                } ?: "Default Ringtone"
+            } catch (_: Exception) {
+                "Default Ringtone"
+            }
         }
-    }
 }

@@ -1,4 +1,4 @@
-package com.nikhil.wakeme.ui.screens
+package com.nikhil.wakeme.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
