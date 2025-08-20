@@ -87,4 +87,15 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
+
+    fun deleteAlarm(alarm: Alarm) {
+        viewModelScope.launch {
+            try {
+                repo.delete(alarm.toAlarmEntity())
+                AlarmScheduler.cancelAlarm(getApplication(), alarm.id)
+            } catch (e: Exception) {
+                _uiState.value = Resource.Error("Failed to delete alarm: ${e.message}")
+            }
+        }
+    }
 }

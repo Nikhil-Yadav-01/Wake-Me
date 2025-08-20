@@ -32,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -82,6 +83,10 @@ fun AlarmEditScreen(
                     onSave = { hour, minute, label, snooze, ringtoneUri, days ->
                         viewModel.saveAlarm(alarmId, hour, minute, label, snooze, ringtoneUri, days)
                         goBack()
+                    },
+                    onDeleteAlarm = {
+                        viewModel.deleteAlarm(it)
+                        goBack()
                     }
                 )
             }
@@ -99,7 +104,8 @@ fun AlarmEditScreen(
 private fun AlarmEditContent(
     alarm: Alarm?,
     alarmId: Long,
-    onSave: (Int, Int, String?, Int, Uri?, Set<Int>) -> Unit
+    onSave: (Int, Int, String?, Int, Uri?, Set<Int>) -> Unit,
+    onDeleteAlarm: (Alarm) -> Unit
 ) {
     val context = LocalContext.current
     val isNewAlarm = alarmId == 0L
@@ -145,6 +151,17 @@ private fun AlarmEditContent(
                         onSave(hour, minute, label, snoozeMinutes, selectedRingtoneUri, selectedDays)
                     }) {
                         Text("Save")
+                    }
+                    if (!isNewAlarm && alarm != null) {
+                        IconButton(onClick = {
+                            onDeleteAlarm(alarm)
+                        }) {
+                            Icon(
+                                painter = painterResource(R.drawable.delete),
+                                contentDescription = "Delete Alarm",
+                                tint = Color.Red
+                            )
+                        }
                     }
                 }
             )
@@ -289,8 +306,9 @@ private fun AlarmEditContent(
                         enabled = false,
                         leadingIcon = {
                             Icon(
-                                Icons.Default.MusicNote,
-                                contentDescription = "Ringtone"
+                                painterResource(id = R.drawable.music_note),
+                                contentDescription = "Ringtone",
+                                tint = MaterialTheme.colorScheme.secondary
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),

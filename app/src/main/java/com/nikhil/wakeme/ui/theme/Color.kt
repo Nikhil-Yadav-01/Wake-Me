@@ -19,6 +19,6 @@ val TextPrimary = Color(0xFFFFFFFF)
 val TextSecondary = Color(0xFFB0B0B0)
 
 // Alarm specific
-val AlarmActive = Color(0xFFFF1744)    // Active alarm red
-val AlarmIdle = Color(0xFF00E676)      // Idle alarm green
+val AlarmActive = Color(0xFF00E676)    // Active alarm green
+val AlarmIdle = Color(0xFFFF1744)      // Idle alarm red
 val AlarmSnooze = Color(0xFFFFD600)    // Snooze yellow
