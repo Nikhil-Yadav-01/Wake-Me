@@ -28,18 +28,13 @@ class AlarmService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
-    private lateinit var notificationManager: NotificationManager
 
     companion object {
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
-        private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "AlarmServiceChannel"
-    }
 
-    override fun onCreate() {
-        super.onCreate()
-        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        private const val SERVICE_NOTIFICATION_ID = 100 // for foreground service
+        private const val SERVICE_CHANNEL_ID = "alarm_service_channel"
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -51,28 +46,30 @@ class AlarmService : Service() {
 
         when (intent?.action) {
             ACTION_START -> {
-                // This check makes the service idempotent.
-                // If the sound is already playing, do nothing.
-                if (mediaPlayer?.isPlaying == true) {
-                    return START_STICKY
+                // Service idempotency: don’t start if already playing
+                if (mediaPlayer?.isPlaying == true) return START_STICKY
+
+                // Start foreground *immediately* (required for Android 12+)
+                val silentNotification = createServiceNotification("Alarm is starting…")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        SERVICE_NOTIFICATION_ID,
+                        silentNotification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    )
+                } else {
+                    startForeground(SERVICE_NOTIFICATION_ID, silentNotification)
                 }
 
                 CoroutineScope(Dispatchers.IO).launch {
                     val alarm = AlarmDatabase.getInstance(applicationContext).alarmDao().getById(alarmId)
                     if (alarm != null) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            startForeground(
-                                NOTIFICATION_ID,
-                                createNotification(alarmId, alarm.label ?: "Alarm"),
-                                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                            )
-                        } else {
-                            startForeground(
-                                NOTIFICATION_ID,
-                                createNotification(alarmId, alarm.label ?: "Alarm")
-                            )
-                        }
                         startAlarm(alarm.ringtoneUri)
+                        // Show full-screen alarm notification (will launch AlarmTriggerActivity)
+                        com.nikhil.wakeme.util.NotificationHelper.showAlarmNotification(
+                            applicationContext,
+                            alarm
+                        )
                     } else {
                         stopSelf()
                     }
@@ -80,7 +77,10 @@ class AlarmService : Service() {
             }
             ACTION_STOP -> {
                 stopAlarm()
-                notificationManager.cancel(NOTIFICATION_ID) // Dismiss the notification
+                // Cancel any alarm notification
+                val notificationManager =
+                    getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.cancelAll()
                 stopSelf()
             }
         }
@@ -88,21 +88,22 @@ class AlarmService : Service() {
     }
 
     private fun startAlarm(ringtoneUriString: String?) {
-        val alarmSoundUri = ringtoneUriString?.toUri() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val alarmSoundUri =
+            ringtoneUriString?.toUri() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         mediaPlayer = MediaPlayer.create(this, alarmSoundUri).apply {
             isLooping = true
             start()
         }
 
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager =
+                getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
 
-        // Correctly handle vibration for different API levels
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 1000, 1000), 0))
         } else {
@@ -118,43 +119,32 @@ class AlarmService : Service() {
         vibrator?.cancel()
     }
 
-    private fun createNotification(alarmId: Long, label: String): Notification {
-        createNotificationChannel()
-        val triggerIntent = Intent(this, AlarmTriggerActivity::class.java).apply {
-            putExtra("ALARM_ID", alarmId)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(this, 0, triggerIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    private fun createServiceNotification(text: String): Notification {
+        val channelId = SERVICE_CHANNEL_ID
+        val channelName = "Alarm Service"
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Alarm is ringing")
-            .setContentText(label)
-            .setSmallIcon(R.drawable.ic_wake_pulse)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setOngoing(true) // Make the notification ongoing
-            .build()
-    }
-
-    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                CHANNEL_ID,
-                "Alarm Sound Service",
-                NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(
+                channelId,
+                channelName,
+                NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(serviceChannel)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
+
+        return NotificationCompat.Builder(this, channelId)
+            .setContentTitle("Wake Me Alarm")
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_wake_pulse)
+            .setOngoing(true)
+            .build()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
-        // No need to call stopAlarm() or cancel notification here if ACTION_STOP handles it.
-        // However, stopAlarm() is generally a good cleanup in onDestroy as a failsafe.
         stopAlarm()
     }
 }

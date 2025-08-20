@@ -14,13 +14,14 @@ data class Alarm(
     val ringtoneUri: Uri?,
     val originalHour: Int,
     val originalMinute: Int,
-    val createdAt: Long
+    val createdAt: Long,
+    val upcomingShown: Boolean
 )
 
 fun AlarmEntity.toAlarm(): Alarm {
     val calendar = Calendar.getInstance().apply { timeInMillis = ringTime }
-    val actualHour = originalHour ?: calendar.get(Calendar.HOUR_OF_DAY)
-    val actualMinute = originalMinute ?: calendar.get(Calendar.MINUTE)
+    val actualHour = calendar.get(Calendar.HOUR_OF_DAY)
+    val actualMinute = calendar.get(Calendar.MINUTE)
 
     return Alarm(
         id = id,
@@ -31,16 +32,14 @@ fun AlarmEntity.toAlarm(): Alarm {
         snoozeDuration = snoozeDuration,
         daysOfWeek = daysOfWeek,
         ringtoneUri = ringtoneUri?.let { Uri.parse(it) },
-        originalHour = originalHour ?: -1, // Provide a default if null
-        originalMinute = originalMinute ?: -1, // Provide a default if null
-        createdAt = createdAt
+        originalHour = originalHour ?: -1,
+        originalMinute = originalMinute ?: -1,
+        createdAt = createdAt,
+        upcomingShown = upcomingShown
     )
 }
 
 fun Alarm.toAlarmEntity(): AlarmEntity {
-    // When converting back to AlarmEntity, we use the 'hour' and 'minute'
-    // from the Alarm object directly as 'originalHour' and 'originalMinute'.
-    // The 'ringTime' will be calculated based on these values.
     val calendar = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, hour)
         set(Calendar.MINUTE, minute)
@@ -48,7 +47,6 @@ fun Alarm.toAlarmEntity(): AlarmEntity {
         set(Calendar.MILLISECOND, 0)
     }
 
-    // If the alarm is for a past time today, set it for tomorrow.
     if (calendar.before(Calendar.getInstance()) && daysOfWeek.isEmpty()) {
         calendar.add(Calendar.DAY_OF_YEAR, 1)
     }
@@ -63,6 +61,7 @@ fun Alarm.toAlarmEntity(): AlarmEntity {
         ringtoneUri = ringtoneUri?.toString(),
         originalHour = hour,
         originalMinute = minute,
-        createdAt = createdAt
+        createdAt = createdAt,
+        upcomingShown = upcomingShown
     )
 }

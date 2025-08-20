@@ -6,6 +6,5 @@ import com.nikhil.wakeme.util.NotificationHelper
 class WakeMeApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        NotificationHelper.createSilentChannel(this)
     }
 }

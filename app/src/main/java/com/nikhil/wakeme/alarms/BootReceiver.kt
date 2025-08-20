@@ -1,6 +1,5 @@
 package com.nikhil.wakeme.alarms
 
-import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,28 +10,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
-    @SuppressLint("MissingPermission")
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             val appContext = context.applicationContext ?: return
 
-            if (!AlarmScheduler.canScheduleExactAlarms(appContext)) {
-                Log.w("BootReceiver", "Cannot reschedule alarms on boot: SCHEDULE_EXACT_ALARM permission not granted.")
-                return
-            }
-
             CoroutineScope(Dispatchers.IO).launch {
                 val db = AlarmDatabase.getInstance(appContext)
                 val alarms = db.alarmDao().getEnabledAlarmsList()
-                Log.i("BootReceiver", "Rescheduling ${alarms.size} alarms.")
-                for (a in alarms) {
-                    val nextTrigger = a.calculateNextTrigger()
-                    if (a.ringTime != nextTrigger) {
-                        a.ringTime = nextTrigger
-                        db.alarmDao().update(a)
-                    }
-                    AlarmScheduler.scheduleAlarm(appContext, a)
+                Log.i("BootReceiver", "Rescheduling ${alarms.size} alarms after reboot/update.")
+
+                for (alarm in alarms) {
+                    val nextTrigger = alarm.calculateNextTrigger()
+                    val updatedAlarm = if (alarm.ringTime != nextTrigger) {
+                        alarm.copy(ringTime = nextTrigger).also { db.alarmDao().update(it) }
+                    } else alarm
+
+                    AlarmScheduler.scheduleAlarm(appContext, updatedAlarm)
                 }
             }
         }

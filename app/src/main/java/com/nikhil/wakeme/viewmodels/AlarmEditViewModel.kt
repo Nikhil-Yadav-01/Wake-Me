@@ -66,7 +66,8 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                     daysOfWeek = daysOfWeek,
                     originalHour = hour, // Set originalHour and originalMinute from the UI input
                     originalMinute = minute,
-                    createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis()
+                    createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis(),
+                    upcomingShown = false
                 )
 
                 // Convert the Alarm object to AlarmEntity for database operations

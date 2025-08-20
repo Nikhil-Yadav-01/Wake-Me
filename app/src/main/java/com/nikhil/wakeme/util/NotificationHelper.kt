@@ -12,62 +12,77 @@ import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.AlarmEntity
 
 object NotificationHelper {
-    private const val CHANNEL_ID = "wake_me_alarm_channel"
-    private const val CHANNEL_NAME = "Wake Me Alarms"
-    private const val FULL_SCREEN_ALARM_REQUEST_CODE = 1001
+    private const val UPCOMING_CHANNEL_ID = "upcoming_alarm_channel"
+    private const val UPCOMING_CHANNEL_NAME = "Upcoming Alarms"
 
-    // This function creates the channel responsible for *displaying* the alarm UI.
-    // It is intentionally silent because the sound will be handled by a foreground service.
-    fun createSilentChannel(context: Context) {
+    private const val FULLSCREEN_CHANNEL_ID = "wake_me_alarm_channel"
+    private const val FULLSCREEN_CHANNEL_NAME = "Wake Me Alarms"
+    private const val FULL_SCREEN_REQUEST_CODE = 1001
+
+    fun showUpcomingAlarmNotification(context: Context, alarm: AlarmEntity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Channel for displaying the alarm screen"
-                // No sound or vibration here.
-                setSound(null, null)
-                enableVibration(false)
-            }
-            notificationManager.createNotificationChannel(channel)
+                UPCOMING_CHANNEL_ID,
+                UPCOMING_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(channel)
         }
+
+        val builder = NotificationCompat.Builder(context, UPCOMING_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_wake_pulse)
+            .setContentTitle("Upcoming Alarm")
+            .setContentText("Alarm \"${alarm.label ?: "Alarm"}\" in 5 minutes")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(alarm.id.toInt() + 10000, builder.build()) // separate ID
     }
 
     fun showAlarmNotification(context: Context, alarm: AlarmEntity) {
-        // Ensure the silent channel exists.
-        createSilentChannel(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                FULLSCREEN_CHANNEL_ID,
+                FULLSCREEN_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                setSound(null, null) // sound is handled by AlarmService
+                enableVibration(false)
+            }
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(channel)
+        }
 
-        // This intent will launch the full-screen alarm activity.
         val fullScreenIntent = Intent(context, AlarmTriggerActivity::class.java).apply {
             putExtra("ALARM_ID", alarm.id)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context,
-            FULL_SCREEN_ALARM_REQUEST_CODE,
+            FULL_SCREEN_REQUEST_CODE,
             fullScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build the notification that will trigger the full-screen intent.
-        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, FULLSCREEN_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_wake_pulse)
             .setContentTitle(alarm.label ?: "Alarm")
             .setContentText("Time to wake up!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(fullScreenPendingIntent, true) // This is the key part.
+            .setFullScreenIntent(fullScreenPendingIntent, true)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(alarm.id.toInt(), notificationBuilder.build())
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(alarm.id.toInt(), builder.build())
     }
 
     fun cancelNotification(context: Context, alarmId: Int) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(alarmId)
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.cancel(alarmId)
+        nm.cancel(alarmId + 10000) // also cancel upcoming notification if exists
     }
 }
