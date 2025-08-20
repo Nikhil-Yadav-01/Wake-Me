@@ -28,7 +28,6 @@ fun <T> AppScreen(
     val context = LocalContext.current
 
     Box(modifier = modifier.fillMaxSize()) {
-
         // Background
         Image(
             painter = painterResource(id = backgroundResId),
@@ -79,7 +78,7 @@ fun <T> AppScreen(
                         LaunchedEffect(resource.message) {
                             Toast.makeText(context, resource.message, Toast.LENGTH_LONG).show()
                         }
-                        // fallback UI (could be Empty or last success if you prefer)
+
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -100,7 +99,7 @@ fun <T> AppScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No data available",
+                        text = "No alarms available",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

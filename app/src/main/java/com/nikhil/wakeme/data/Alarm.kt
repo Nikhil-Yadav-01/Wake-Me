@@ -2,6 +2,7 @@ package com.nikhil.wakeme.data
 
 import android.net.Uri
 import java.util.Calendar
+import androidx.core.net.toUri
 
 data class Alarm(
     val id: Long,
@@ -12,6 +13,7 @@ data class Alarm(
     val snoozeDuration: Int,
     val daysOfWeek: Set<Int>,
     val ringtoneUri: Uri?,
+    val ringtoneTitle: String = "Default Ringtone",
     val originalHour: Int,
     val originalMinute: Int,
     val createdAt: Long,
@@ -31,7 +33,8 @@ fun AlarmEntity.toAlarm(): Alarm {
         enabled = enabled,
         snoozeDuration = snoozeDuration,
         daysOfWeek = daysOfWeek,
-        ringtoneUri = ringtoneUri?.let { Uri.parse(it) },
+        ringtoneUri = ringtoneUri?.toUri(),
+        ringtoneTitle = ringtoneTitle ?: "Default Ringtone",
         originalHour = originalHour ?: -1,
         originalMinute = originalMinute ?: -1,
         createdAt = createdAt,
@@ -59,6 +62,7 @@ fun Alarm.toAlarmEntity(): AlarmEntity {
         snoozeDuration = snoozeDuration,
         daysOfWeek = daysOfWeek,
         ringtoneUri = ringtoneUri?.toString(),
+        ringtoneTitle = ringtoneTitle,
         originalHour = hour,
         originalMinute = minute,
         createdAt = createdAt,

@@ -1,6 +1,7 @@
 package com.nikhil.wakeme.viewmodels
 
 import android.app.Application
+import android.media.RingtoneManager
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,7 +29,11 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                 try {
                     val alarm = repo.getById(alarmId)
                     if (alarm != null) {
-                        _uiState.value = Resource.Success(alarm)
+                        _uiState.value = Resource.Success(
+                            alarm.copy(
+                                ringtoneTitle = resolveRingtoneTitle(alarm.ringtoneUri)
+                            )
+                        )
                     } else {
                         _uiState.value = Resource.Error("Alarm not found")
                     }
@@ -51,26 +56,24 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             try {
                 val isNewAlarm = alarmId == 0L
-                // existingAlarm will be of type Alarm?
                 val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
 
-                // Create an Alarm object from the current UI state
                 val currentAlarm = Alarm(
                     id = existingAlarm?.id ?: 0L,
                     hour = hour,
                     minute = minute,
                     label = label,
                     snoozeDuration = snoozeDuration,
-                    enabled = true, // Alarms are enabled on save
+                    enabled = true,
                     ringtoneUri = ringtoneUri,
                     daysOfWeek = daysOfWeek,
-                    originalHour = hour, // Set originalHour and originalMinute from the UI input
+                    originalHour = hour,
                     originalMinute = minute,
                     createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis(),
-                    upcomingShown = false
+                    upcomingShown = false,
+                    ringtoneTitle = resolveRingtoneTitle(ringtoneUri) // <-- inject here
                 )
 
-                // Convert the Alarm object to AlarmEntity for database operations
                 val alarmEntityToSave = currentAlarm.toAlarmEntity()
 
                 val id = if (isNewAlarm) {
@@ -80,8 +83,11 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
                     alarmEntityToSave.id
                 }
 
-                // Schedule the alarm using the AlarmEntity (which has the correct ringTime)
+                // schedule alarm
                 AlarmScheduler.scheduleAlarm(getApplication(), alarmEntityToSave.copy(id = id))
+
+                // push back into UI
+                _uiState.value = Resource.Success(currentAlarm.copy(id = id))
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
             }
@@ -96,6 +102,16 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to delete alarm: ${e.message}")
             }
+        }
+    }
+
+    private fun resolveRingtoneTitle(uri: Uri?): String {
+        return try {
+            uri?.let {
+                RingtoneManager.getRingtone(getApplication(), it)?.getTitle(getApplication())
+            } ?: "Default Ringtone"
+        } catch (_: Exception) {
+            "Default Ringtone"
         }
     }
 }
