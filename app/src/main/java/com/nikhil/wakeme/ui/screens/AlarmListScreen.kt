@@ -6,22 +6,44 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmRepository
@@ -41,7 +63,13 @@ fun AlarmListScreen(
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
 
-    var hasExactAlarmPermission by remember { mutableStateOf(AlarmScheduler.canScheduleExactAlarms(context)) }
+    var hasExactAlarmPermission by remember {
+        mutableStateOf(
+            AlarmScheduler.canScheduleExactAlarms(
+                context
+            )
+        )
+    }
 
     fun requestExactAlarmPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -58,22 +86,26 @@ fun AlarmListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    onItemClick(0L)
-                          },
-                modifier = Modifier.padding(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier.size(64.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.bg),
-                        contentDescription = "Home background",
-                        contentScale = ContentScale.FillBounds,
+                onClick = { onItemClick(0L) },
+                modifier = Modifier
+                    .size(64.dp)
+                    .border(
+                        width = 2.dp,
+                        brush = Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        ),
+                        shape = RoundedCornerShape(percent = 50)
                     )
-                    Icon(Icons.Default.Add, contentDescription = "Add Alarm")
-                }
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.add_alarm),
+                    contentDescription = "Home background",
+                    contentScale = ContentScale.Crop,
+                )
             }
         }
     ) { padding ->
@@ -84,98 +116,95 @@ fun AlarmListScreen(
                 contentScale = ContentScale.FillBounds,
                 modifier = Modifier.fillMaxSize()
             )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                if (hasExactAlarmPermission) {
-                    when (val resource = uiState) {
-                        is Resource.Loading -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
+            if (hasExactAlarmPermission) {
+                when (val resource = uiState) {
+                    is Resource.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
+                    }
 
-                        is Resource.Success -> {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(resource.data, key = { it.id }) { alarm ->
-                                    AlarmItem(
-                                        alarm = alarm,
-                                        onToggle = { enabled ->
-                                            val updatedAlarm = alarm.copy(enabled = enabled) // This is an Alarm object
-                                            scope.launch {
-                                                // Need to convert back to AlarmEntity for repo operations
-                                                repo.update(updatedAlarm.toAlarmEntity()) 
-                                                if (enabled) {
-                                                    AlarmScheduler.scheduleAlarm(
-                                                        context,
-                                                        updatedAlarm.toAlarmEntity() // Schedule with AlarmEntity
-                                                    )
-                                                } else {
-                                                    AlarmScheduler.cancelAlarm(context, alarm.id)
-                                                }
+                    is Resource.Success -> {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(resource.data, key = { it.id }) { alarm ->
+                                AlarmItem(
+                                    alarm = alarm,
+                                    onToggle = { enabled ->
+                                        val updatedAlarm =
+                                            alarm.copy(enabled = enabled) // This is an Alarm object
+                                        scope.launch {
+                                            // Need to convert back to AlarmEntity for repo operations
+                                            repo.update(updatedAlarm.toAlarmEntity())
+                                            if (enabled) {
+                                                AlarmScheduler.scheduleAlarm(
+                                                    context,
+                                                    updatedAlarm.toAlarmEntity() // Schedule with AlarmEntity
+                                                )
+                                            } else {
+                                                AlarmScheduler.cancelAlarm(context, alarm.id)
                                             }
-                                        },
-                                        onClick = {
-                                            onItemClick(alarm.id)
                                         }
-                                    )
-                                }
-                            }
-                        }
-
-                        is Resource.Empty -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "No alarms set.",
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    textAlign = TextAlign.Center
+                                    },
+                                    onClick = {
+                                        onItemClick(alarm.id)
+                                    }
                                 )
                             }
                         }
+                    }
 
-                        is Resource.Error -> {
-                            Toast.makeText(context, resource.message, Toast.LENGTH_SHORT).show()
-                        }
-                        
-                        else -> {
-                            
+                    is Resource.Empty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No alarms set.",
+                                style = MaterialTheme.typography.headlineLarge,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
-                } else {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+
+                    is Resource.Error -> {
+                        Toast.makeText(context, resource.message, Toast.LENGTH_SHORT).show()
+                    }
+
+                    else -> {}
+                }
+            } else {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Permission Required",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "To ensure alarms work correctly, please grant the permission to schedule exact alarms.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { requestExactAlarmPermission() }) {
                             Text(
-                                text = "Permission Required",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                "Grant Permission",
+                                style = MaterialTheme.typography.labelLarge
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "To ensure alarms work correctly, please grant the permission to schedule exact alarms.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { requestExactAlarmPermission() }) {
-                                Text("Grant Permission", style = MaterialTheme.typography.labelLarge)
-                            }
                         }
                     }
                 }
             }
+
         }
     }
 }

@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 class AlarmEditViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = AlarmRepository(application)
 
-    private val _uiState = MutableStateFlow<Resource<Alarm?>>(Resource.Initial())
+    private val _uiState = MutableStateFlow<Resource<Alarm?>>(Resource.Loading())
     val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
