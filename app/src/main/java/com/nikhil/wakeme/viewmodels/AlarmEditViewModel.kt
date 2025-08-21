@@ -28,19 +28,19 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         if (alarmId == 0L) {
             _uiState.value = Resource.Success(null)
         } else {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 try {
-                    val alarm = repo.getById(alarmId)
+                        val alarm = withContext(Dispatchers.IO) { repo.getById(alarmId) }
 
-                    if (alarm != null) {
-                        _uiState.value = Resource.Success(
-                            alarm.copy(
-                                ringtoneTitle = resolveRingtoneTitle(alarm.ringtoneUri)
+                        if (alarm != null) {
+                            _uiState.value = Resource.Success(
+                                alarm.copy(
+                                    ringtoneTitle = resolveRingtoneTitle(alarm.ringtoneUri)
+                                )
                             )
-                        )
-                    } else {
-                        _uiState.value = Resource.Error("Alarm not found")
-                    }
+                        } else {
+                            _uiState.value = Resource.Error("Alarm not found")
+                        }
 
                 } catch (e: Exception) {
                     _uiState.value = Resource.Error("Failed to load alarm: ${e.message}")
@@ -58,78 +58,72 @@ class AlarmEditViewModel(application: Application) : AndroidViewModel(applicatio
         ringtoneUri: Uri?,
         daysOfWeek: Set<Int>
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 val isNewAlarm = alarmId == 0L
+                withContext(Dispatchers.IO) {
+                    val existingAlarm = if (!isNewAlarm) repo.getById(alarmId) else null
 
-                val existingAlarm = withContext(Dispatchers.IO) {
-                    if (!isNewAlarm) repo.getById(alarmId) else null
-                }
+                    val ringtoneTitle = resolveRingtoneTitle(ringtoneUri)
 
-                val ringtoneTitle = resolveRingtoneTitle(ringtoneUri)
+                    val currentAlarm = Alarm(
+                        id = existingAlarm?.id ?: 0L,
+                        hour = hour,
+                        minute = minute,
+                        label = label,
+                        snoozeDuration = snoozeDuration,
+                        enabled = true,
+                        ringtoneUri = ringtoneUri,
+                        daysOfWeek = daysOfWeek,
+                        originalHour = hour,
+                        originalMinute = minute,
+                        createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis(),
+                        upcomingShown = false,
+                        ringtoneTitle = ringtoneTitle
+                    )
 
-                val currentAlarm = Alarm(
-                    id = existingAlarm?.id ?: 0L,
-                    hour = hour,
-                    minute = minute,
-                    label = label,
-                    snoozeDuration = snoozeDuration,
-                    enabled = true,
-                    ringtoneUri = ringtoneUri,
-                    daysOfWeek = daysOfWeek,
-                    originalHour = hour,
-                    originalMinute = minute,
-                    createdAt = existingAlarm?.createdAt ?: System.currentTimeMillis(),
-                    upcomingShown = false,
-                    ringtoneTitle = ringtoneTitle
-                )
-
-                val id = withContext(Dispatchers.IO) {
                     val alarmEntityToSave = currentAlarm.toAlarmEntity()
-                    if (isNewAlarm) {
+                    val id = if (isNewAlarm) {
                         repo.insert(alarmEntityToSave)
                     } else {
                         repo.update(alarmEntityToSave)
                         alarmEntityToSave.id
                     }
+
+                    // schedule alarm
+                    AlarmScheduler.scheduleAlarm(
+                        getApplication(),
+                        currentAlarm.toAlarmEntity().copy(id = id)
+                    )
+                    _uiState.value = Resource.Success(currentAlarm.copy(id = id))
                 }
-
-                // schedule alarm
-                AlarmScheduler.scheduleAlarm(
-                    getApplication(),
-                    currentAlarm.toAlarmEntity().copy(id = id)
-                )
-                _uiState.value = Resource.Success(currentAlarm.copy(id = id))
-
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to save alarm: ${e.message}")
-
             }
         }
     }
 
     fun deleteAlarm(alarm: Alarm) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                repo.delete(alarm.toAlarmEntity())
-                AlarmScheduler.cancelAlarm(getApplication(), alarm.id)
-
+                withContext(Dispatchers.IO) {
+                    repo.delete(alarm.toAlarmEntity())
+                    AlarmScheduler.cancelAlarm(getApplication(), alarm.id)
+                }
             } catch (e: Exception) {
                 _uiState.value = Resource.Error("Failed to delete alarm: ${e.message}")
-
             }
         }
     }
 
     private suspend fun resolveRingtoneTitle(uri: Uri?): String =
-        withContext(Dispatchers.IO) {
-            try {
-                uri?.let {
-                    RingtoneManager.getRingtone(getApplication(), it)
-                        ?.getTitle(getApplication())
-                } ?: "Default Ringtone"
-            } catch (_: Exception) {
-                "Default Ringtone"
-            }
+        try {
+            uri?.let {
+                RingtoneManager.getRingtone(getApplication(), it)
+                    ?.getTitle(getApplication())
+            } ?: "Default Ringtone"
+        } catch (_: Exception) {
+            "Default Ringtone"
         }
+
 }

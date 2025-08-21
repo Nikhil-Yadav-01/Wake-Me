@@ -15,12 +15,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.nikhil.wakeme.ui.screens.AlarmTriggerScreen
+import com.nikhil.wakeme.alarms.AlarmService
 import com.nikhil.wakeme.ui.theme.WakeMeTheme
 import com.nikhil.wakeme.util.Resource
 import com.nikhil.wakeme.viewmodels.AlarmTriggerViewModel
+import android.content.Intent
+import android.os.CountDownTimer
 
 class AlarmTriggerActivity : ComponentActivity() {
     private val viewModel: AlarmTriggerViewModel by viewModels()
+    private var autoSnoozeTimer: CountDownTimer? = null
+    private val AUTO_SNOOZE_DELAY_MILLIS = 5 * 60 * 1000L // 5 minutes
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +35,17 @@ class AlarmTriggerActivity : ComponentActivity() {
 
         setShowWhenLocked(true)
         setTurnScreenOn(true)
+
+        // Start the auto-snooze timer
+        autoSnoozeTimer = object : CountDownTimer(AUTO_SNOOZE_DELAY_MILLIS, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                // Optionally update UI with remaining time
+            }
+
+            override fun onFinish() {
+                viewModel.snoozeAlarm()
+            }
+        }.start()
 
         setContent {
             WakeMeTheme {
@@ -57,10 +73,12 @@ class AlarmTriggerActivity : ComponentActivity() {
                             AlarmTriggerScreen(
                                 label = alarm.label ?: "Alarm",
                                 onStop = {
+                                    autoSnoozeTimer?.cancel()
                                     viewModel.stopAlarm()
                                     finish()
                                 },
                                 onSnooze = {
+                                    autoSnoozeTimer?.cancel()
                                     viewModel.snoozeAlarm()
                                     finish()
                                 }
@@ -92,6 +110,17 @@ class AlarmTriggerActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val alarmId = intent.getLongExtra("ALARM_ID", -1L)
+        if (alarmId != -1L) {
+            val serviceIntent = Intent(this, AlarmService::class.java).apply {
+                action = AlarmService.ACTION_START
+                putExtra("ALARM_ID", alarmId)
             }
         }
     }
