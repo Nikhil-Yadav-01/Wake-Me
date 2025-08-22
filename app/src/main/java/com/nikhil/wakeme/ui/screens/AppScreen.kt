@@ -18,12 +18,12 @@ enum class ErrorMode { Inline, Toast }
 @Composable
 fun <T> AppScreen(
     resource: Resource<T>,
-    modifier: Modifier = Modifier,
     backgroundResId: Int,
+    modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
-    errorMode: ErrorMode = ErrorMode.Inline,
+    errorMode: ErrorMode = ErrorMode.Toast,
     onError: ((String) -> Unit)? = null,
-    content: @Composable (T) -> Unit
+    onSuccess: @Composable (T) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -107,7 +107,7 @@ fun <T> AppScreen(
             }
 
             is Resource.Success -> {
-                content(resource.data)
+                onSuccess(resource.data)
             }
         }
     }

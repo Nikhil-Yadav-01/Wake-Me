@@ -15,11 +15,14 @@ import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.AlarmDatabase
+import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.util.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,6 +41,9 @@ class AlarmService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("AlarmService", "onStartCommand: ${intent?.action}  id: $startId")
+        val repo = AlarmRepository(applicationContext)
+
         val alarmId = intent?.getLongExtra("ALARM_ID", -1L) ?: -1L
         if (alarmId == -1L) {
             stopSelf()
@@ -62,14 +68,10 @@ class AlarmService : Service() {
                 }
 
                 CoroutineScope(Dispatchers.IO).launch {
-                    val alarm = AlarmDatabase.getInstance(applicationContext).alarmDao().getById(alarmId)
+                    val alarm = repo.getById(alarmId)
                     if (alarm != null) {
-                        startAlarm(alarm.ringtoneUri)
-                        // Show full-screen alarm notification (will launch AlarmTriggerActivity)
-                        com.nikhil.wakeme.util.NotificationHelper.showAlarmNotification(
-                            applicationContext,
-                            alarm
-                        )
+                        startAlarm(alarm.ringtoneUri?.toString(), alarm.vibration)
+                        NotificationHelper.showAlarmNotification(applicationContext, alarm)
                     } else {
                         stopSelf()
                     }
@@ -87,7 +89,7 @@ class AlarmService : Service() {
         return START_STICKY
     }
 
-    private fun startAlarm(ringtoneUriString: String?) {
+    private fun startAlarm(ringtoneUriString: String?, vibration: Boolean) {
         val alarmSoundUri =
             ringtoneUriString?.toUri() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         mediaPlayer = MediaPlayer.create(this, alarmSoundUri).apply {
@@ -95,20 +97,22 @@ class AlarmService : Service() {
             start()
         }
 
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager =
-                getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
+        if (vibration) {
+            vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager =
+                    getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 1000, 1000), 0))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(longArrayOf(0, 1000, 1000), 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 1000, 1000), 0))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(longArrayOf(0, 1000, 1000), 0)
+            }
         }
     }
 
@@ -120,12 +124,11 @@ class AlarmService : Service() {
     }
 
     private fun createServiceNotification(text: String): Notification {
-        val channelId = SERVICE_CHANNEL_ID
         val channelName = "Alarm Service"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId,
+                SERVICE_CHANNEL_ID,
                 channelName,
                 NotificationManager.IMPORTANCE_LOW
             )
@@ -133,7 +136,7 @@ class AlarmService : Service() {
             manager.createNotificationChannel(channel)
         }
 
-        return NotificationCompat.Builder(this, channelId)
+        return NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
             .setContentTitle("Wake Me Alarm")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_wake_pulse)

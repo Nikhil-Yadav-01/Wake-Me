@@ -6,20 +6,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.alarms.AlarmService
-import com.nikhil.wakeme.data.AlarmDatabase
-import com.nikhil.wakeme.data.AlarmEntity
+import com.nikhil.wakeme.data.Alarm
+import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.util.NotificationHelper
 import com.nikhil.wakeme.util.Resource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AlarmTriggerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val db = AlarmDatabase.getInstance(application)
-    private val _uiState = MutableStateFlow<Resource<AlarmEntity>>(Resource.Loading())
-    val uiState = _uiState.asStateFlow()
+    private val repo = AlarmRepository(application)
     private val scheduler = AlarmScheduler
+
+    private val _uiState = MutableStateFlow<Resource<Alarm>>(Resource.Loading())
+    val uiState = _uiState.asStateFlow()
 
     fun loadAlarm(alarmId: Long) {
         _uiState.value = Resource.Loading()
@@ -28,7 +31,8 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
                 _uiState.value = Resource.Error("Invalid Alarm ID")
                 return@launch
             }
-            val alarm = db.alarmDao().getById(alarmId)
+
+            val alarm = withContext(Dispatchers.IO) { repo.getById(alarmId) }
             if (alarm != null) {
                 _uiState.value = Resource.Success(alarm)
             } else {
@@ -49,17 +53,20 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
         val currentState = uiState.value
         if (currentState is Resource.Success) {
             val alarm = currentState.data
-            // Cancel the notification that shows the full-screen UI
+
             NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
 
             val snoozedTimeMillis = System.currentTimeMillis() + alarm.snoozeDuration * 60 * 1000L
             val snoozedAlarm = alarm.copy(
-                ringTime = snoozedTimeMillis,
-                enabled = true
+                nextTriggerAt = snoozedTimeMillis,
+                enabled = true,
+                snoozeCount = alarm.snoozeCount + 1
             )
-            viewModelScope.launch {
-                db.alarmDao().update(snoozedAlarm)
+
+            viewModelScope.launch(Dispatchers.IO) {
+                repo.update(snoozedAlarm)
                 scheduler.scheduleAlarm(getApplication(), snoozedAlarm)
+                _uiState.value = Resource.Success(snoozedAlarm)
             }
         }
     }
@@ -69,17 +76,17 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
         val currentState = uiState.value
         if (currentState is Resource.Success) {
             val alarm = currentState.data
-            // Cancel the notification that shows the full-screen UI
             NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
 
-            if (alarm.daysOfWeek.isNotEmpty()) {
-                // For recurring alarms, we don't need to do anything here as the
-                // worker has already scheduled the next occurrence.
-                // We just need to stop the sound.
-            } else {
-                // For non-recurring alarms, they are already disabled by the worker.
-                // We just need to stop the sound.
+            if (alarm.daysOfWeek.isEmpty()) {
+                // Non-recurring: disable immediately
+                val disabledAlarm = alarm.copy(enabled = false)
+                viewModelScope.launch(Dispatchers.IO) {
+                    repo.update(disabledAlarm)
+                    _uiState.value = Resource.Success(disabledAlarm)
+                }
             }
+            // Recurring alarms auto-reschedule, so no update needed
         }
     }
 }

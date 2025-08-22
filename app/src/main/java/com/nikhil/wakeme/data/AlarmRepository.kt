@@ -5,22 +5,22 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class AlarmRepository(context: Context) {
-    private val db = AlarmDatabase.getInstance(context)
-    private val dao = db.alarmDao()
+    private val dao = AlarmDatabase.getInstance(context).alarmDao()
 
-    fun getAllFlow(): Flow<List<Alarm>> = dao.getAllFlow().map { it.map(AlarmEntity::toAlarm) }
+    fun getAllFlow(): Flow<List<Alarm>> =
+        dao.getAllFlow().map { it.map(AlarmEntity::toAlarm) }
 
-    suspend fun insert(alarm: AlarmEntity): Long {
-        return dao.insert(alarm)
-    }
+    fun getEnabledAlarmsFlow(): Flow<List<Alarm>> =
+        dao.getEnabledAlarmsFlow().map { it.map(AlarmEntity::toAlarm) }
 
-    suspend fun update(alarm: AlarmEntity) {
-        dao.update(alarm)
-    }
+    suspend fun getEnabledAlarmsList(): List<Alarm> =
+        dao.getEnabledAlarmsList().map(AlarmEntity::toAlarm)
 
-    suspend fun delete(alarm: AlarmEntity) {
-        dao.delete(alarm)
-    }
+    suspend fun insert(alarm: Alarm): Long = dao.insert(alarm.toAlarmEntity())
+
+    suspend fun update(alarm: Alarm): Int = dao.update(alarm.toAlarmEntity())
+
+    suspend fun delete(alarm: Alarm): Int = dao.delete(alarm.toAlarmEntity())
 
     suspend fun getById(id: Long): Alarm? = dao.getById(id)?.toAlarm()
 }
