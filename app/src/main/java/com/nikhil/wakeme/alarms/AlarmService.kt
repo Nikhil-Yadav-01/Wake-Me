@@ -3,7 +3,6 @@ package com.nikhil.wakeme.alarms
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -18,9 +17,7 @@ import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
-import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
-import com.nikhil.wakeme.data.AlarmDatabase
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.util.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
@@ -52,7 +49,6 @@ class AlarmService : Service() {
 
         when (intent?.action) {
             ACTION_START -> {
-                // Service idempotency: don’t start if already playing
                 if (mediaPlayer?.isPlaying == true) return START_STICKY
 
                 // Start foreground *immediately* (required for Android 12+)

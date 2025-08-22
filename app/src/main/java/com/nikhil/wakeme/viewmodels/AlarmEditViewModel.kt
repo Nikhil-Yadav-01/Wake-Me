@@ -55,7 +55,7 @@ class AlarmEditViewModel(
                 val alarm = withContext(Dispatchers.IO) { repository.getById(alarmId) }
                 if (alarm != null) {
                     _uiState.value = UiState(
-                        date = alarm.dateTime,
+                        date = alarm.originalDateTime,
                         hour = alarm.hour,
                         minute = alarm.minute,
                         label = alarm.label.orEmpty(),
@@ -96,7 +96,8 @@ class AlarmEditViewModel(
             val state = _uiState.value
             val alarm = Alarm(
                 id = alarmId,
-                dateTime = state.date,
+                originalDateTime = state.date,
+                nextTriggerAt = state.date,
                 label = state.label,
                 snoozeDuration = state.snoozeDuration,
                 ringtoneUri = state.ringtoneUri,
@@ -108,8 +109,16 @@ class AlarmEditViewModel(
             )
 
             viewModelScope.launch(Dispatchers.IO) {
-                repository.insert(alarm)
-                AlarmScheduler.scheduleAlarm(app, alarm)
+                val savedId = if (alarmId == 0L) {
+                    repository.insert(alarm)
+                } else {
+                    repository.update(alarm)
+                    alarmId
+                }
+
+                repository.getById(savedId)?.let {
+                    AlarmScheduler.scheduleAlarm(app, it)
+                }
             }
             _loadState.value = Resource.Success(alarm)
         } catch (_: Exception) {
@@ -137,7 +146,6 @@ class AlarmEditViewModel(
         cal.set(Calendar.MILLISECOND, 0)
         state.copy(date = cal.timeInMillis)
     }
-
     fun setMinute(minute: Int) = _uiState.update { state ->
         val cal = Calendar.getInstance().apply { timeInMillis = state.date }
         cal.set(Calendar.MINUTE, minute)

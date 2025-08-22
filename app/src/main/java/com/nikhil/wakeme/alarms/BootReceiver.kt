@@ -23,10 +23,10 @@ class BootReceiver : BroadcastReceiver() {
                 val alarms = repo.getEnabledAlarmsList()
                 Log.i("BootReceiver", "Rescheduling ${alarms.size} alarms after reboot/update.")
                 alarms.forEach { alarm ->
-                    val next = alarm.calculateNextTrigger()
-                    val updated = alarm.copy(nextTriggerAt = next.timeInMillis, upcomingShown = false)
-                    repo.update(updated)
-                    AlarmScheduler.scheduleAlarm(appContext, updated)
+//                    val next = alarm.calculateNextTrigger().timeInMillis
+//                    val updated = alarm.copy(nextTriggerAt = next, upcomingShown = false)
+//                    repo.update(updated)
+                    AlarmScheduler.scheduleAlarm(appContext, alarm)
                 }
             }
         }

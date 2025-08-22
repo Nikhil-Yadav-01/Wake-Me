@@ -6,7 +6,6 @@ import java.util.*
 
 data class Alarm(
     val id: Long = 0L,
-    val dateTime: Long = Calendar.getInstance().timeInMillis, // full date & time
     val label: String? = null,
     val enabled: Boolean = true,
     val snoozeDuration: Int = 10,
@@ -17,18 +16,19 @@ data class Alarm(
     val volume: Float = 1f,
     val vibration: Boolean = true,
     val upcomingShown: Boolean = false,
+    val originalDateTime: Long = Calendar.getInstance().timeInMillis,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val nextTriggerAt: Long? = null,
+    val nextTriggerAt: Long = Calendar.getInstance().timeInMillis,
     val missedCount: Int = 0,
     val timezoneId: String = TimeZone.getDefault().id
 ) {
     // Derived properties (computed from `date`)
     val hour: Int
-        get() = Calendar.getInstance().apply { timeInMillis = dateTime }.get(Calendar.HOUR_OF_DAY)
+        get() = Calendar.getInstance().apply { timeInMillis = originalDateTime }.get(Calendar.HOUR_OF_DAY)
 
     val minute: Int
-        get() = Calendar.getInstance().apply { timeInMillis = dateTime }.get(Calendar.MINUTE)
+        get() = Calendar.getInstance().apply { timeInMillis = originalDateTime }.get(Calendar.MINUTE)
 
     val timeFormatted: String
         get() = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
@@ -41,7 +41,7 @@ data class Alarm(
         get() = daysOfWeek.isNotEmpty()
 
     fun timeUntilFormatted(): String {
-        val diffMillis = (nextTriggerAt ?: dateTime) - System.currentTimeMillis()
+        val diffMillis = nextTriggerAt - System.currentTimeMillis()
         return if (diffMillis > 0) {
             val hours = diffMillis / (1000 * 60 * 60)
             val minutes = (diffMillis / (1000 * 60)) % 60
@@ -52,11 +52,16 @@ data class Alarm(
 
 fun Alarm.calculateNextTrigger(): Calendar {
     val tz = TimeZone.getTimeZone(timezoneId)
+
+    if (nextTriggerAt >= originalDateTime) return Calendar.getInstance(tz).apply {
+        timeInMillis = nextTriggerAt
+    }
+
     val now = Calendar.getInstance(tz)
 
-    // Start from the stored date/time
+    // Start from the last date/time
     val nextTrigger = Calendar.getInstance(tz).apply {
-        timeInMillis = dateTime
+        timeInMillis = nextTriggerAt
     }
 
     // One-time alarm
@@ -72,8 +77,8 @@ fun Alarm.calculateNextTrigger(): Calendar {
             return nextTrigger
         }
         nextTrigger.add(Calendar.DAY_OF_YEAR, 1)
-        nextTrigger.set(Calendar.HOUR_OF_DAY, Calendar.getInstance(tz).apply { timeInMillis = dateTime }.get(Calendar.HOUR_OF_DAY))
-        nextTrigger.set(Calendar.MINUTE, Calendar.getInstance(tz).apply { timeInMillis = dateTime }.get(Calendar.MINUTE))
+        nextTrigger.set(Calendar.HOUR_OF_DAY, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.HOUR_OF_DAY))
+        nextTrigger.set(Calendar.MINUTE, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.MINUTE))
         nextTrigger.set(Calendar.SECOND, 0)
         nextTrigger.set(Calendar.MILLISECOND, 0)
     }
@@ -83,7 +88,6 @@ fun Alarm.calculateNextTrigger(): Calendar {
     return nextTrigger
 }
 
-
 /**
  * Converts AlarmEntity (DB) -> Alarm (UI)
  */
@@ -92,7 +96,7 @@ fun AlarmEntity.toAlarm(): Alarm {
 
     return Alarm(
         id = id,
-        dateTime = ringTime.timeInMillis,
+        originalDateTime = ringTime.timeInMillis,
         label = label,
         enabled = enabled,
         snoozeDuration = snoozeDuration,
@@ -116,7 +120,7 @@ fun AlarmEntity.toAlarm(): Alarm {
  */
 fun Alarm.toAlarmEntity(): AlarmEntity {
     val calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneId)).apply {
-        timeInMillis = dateTime
+        timeInMillis = originalDateTime
     }
 
     return AlarmEntity(

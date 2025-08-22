@@ -13,7 +13,6 @@ import androidx.work.WorkManager
 import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.data.calculateNextTrigger
-import com.nikhil.wakeme.data.toAlarmEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -57,46 +56,59 @@ object AlarmScheduler {
         context.stopService(serviceIntent)
     }
 
-    fun scheduleAlarm(context: Context, alarm: Alarm) {
+    // Decide how to handle alarm
+    fun scheduleAlarm(context: Context, alarm: Alarm, isSnooze: Boolean = false) {
         Log.d("AlarmScheduler", "scheduleAlarm: $alarm")
         if (!alarm.enabled) return
+        val repo = AlarmRepository(context)
 
         cancelExistingAlarmTriggers(context, alarm.id)
 
         CoroutineScope(Dispatchers.IO).launch {
-            val repo = AlarmRepository(context)
-            val nextTriggerAt = alarm.calculateNextTrigger()
-
-            val updated = alarm.copy(
-                updatedAt = System.currentTimeMillis(),
-                nextTriggerAt = nextTriggerAt.timeInMillis,
-                upcomingShown = false,
-            )
+            // Update next occurrence or disable if one-shot
+            val updated =
+                if (isSnooze) {
+                    val snoozedTimeMillis = System.currentTimeMillis() + alarm.snoozeDuration * 60 * 1000L
+                    alarm.copy(
+                        updatedAt = System.currentTimeMillis(),
+                        nextTriggerAt = snoozedTimeMillis,
+                        snoozeCount = alarm.snoozeCount + 1
+                    )
+                } else {
+                    val next = alarm.calculateNextTrigger().timeInMillis
+                    alarm.copy(
+                        updatedAt = System.currentTimeMillis(),
+                        upcomingShown = false,
+                        nextTriggerAt = next
+                    )
+                }
             repo.update(updated)
-        }
 
-        val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && canScheduleExactAlarms(context)) {
-            val intent = Intent(context, AlarmReceiver::class.java).apply {
-                putExtra(EXTRA_ALARM_ID, alarm.id)
-                putExtra(EXTRA_TYPE, "MAIN")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && canScheduleExactAlarms(context)) {
+                val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
+
+                val intent = Intent(context, AlarmReceiver::class.java).apply {
+                    putExtra(EXTRA_ALARM_ID, updated.id)
+                    putExtra(EXTRA_TYPE, "MAIN")
+                }
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    updated.id.toInt(),
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager?.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    updated.nextTriggerAt,
+                    pendingIntent
+                )
+                Log.d("AlarmScheduler", "${updated.nextTriggerAt}  ${System.currentTimeMillis()}")
+
+                scheduleUpcomingWithAlarmManager(context, updated)
+            } else {
+                scheduleUpcomingWithWorkManager(context, updated)
+                scheduleMainWithWorkManager(context, updated)
             }
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                alarm.id.toInt(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            alarmManager?.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                alarm.nextTriggerAt ?: alarm.createdAt,
-                pendingIntent
-            )
-
-            scheduleUpcomingWithAlarmManager(context, alarm)
-        } else {
-            scheduleUpcomingWithWorkManager(context, alarm)
-            scheduleMainWithWorkManager(context, alarm)
         }
     }
 
@@ -118,7 +130,7 @@ object AlarmScheduler {
             .putString(EXTRA_TYPE, if (isMain) "MAIN" else "UPCOMING")
             .build()
         val triggerAt = if (isMain) (alarm.nextTriggerAt ?: return)
-            else (alarm.nextTriggerAt ?: return) - TimeUnit.MINUTES.toMillis(5)
+        else (alarm.nextTriggerAt ?: return) - TimeUnit.MINUTES.toMillis(5)
 
         val delay = triggerAt - System.currentTimeMillis()
         if (delay <= 0) return
@@ -133,7 +145,7 @@ object AlarmScheduler {
     }
 
     private fun scheduleUpcomingWithAlarmManager(context: Context, alarm: Alarm) {
-        val triggerAt = (alarm.nextTriggerAt ?: return) - TimeUnit.MINUTES.toMillis(5)
+        val triggerAt = alarm.nextTriggerAt - TimeUnit.MINUTES.toMillis(5)
         if (triggerAt <= System.currentTimeMillis()) return
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
@@ -149,10 +161,16 @@ object AlarmScheduler {
 
         val alarmManager = ContextCompat.getSystemService(context, AlarmManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+            alarmManager?.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAt,
+                pendingIntent
+            )
         } else {
             alarmManager?.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
         }
+
+        Log.d("AlarmScheduler", "scheduled $alarm")
     }
 
     fun cancelAlarm(context: Context, alarmId: Long) {

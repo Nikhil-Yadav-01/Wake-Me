@@ -36,7 +36,7 @@ object NotificationHelper {
         val builder = NotificationCompat.Builder(context, UPCOMING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_wake_pulse)
             .setContentTitle("Upcoming Alarm")
-            .setContentText("Alarm \"${alarm.label ?: "Alarm"}\" in 5 minutes")
+            .setContentText("Alarm in 5 minutes")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 

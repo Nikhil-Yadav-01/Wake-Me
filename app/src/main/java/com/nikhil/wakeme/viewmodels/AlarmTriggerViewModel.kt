@@ -53,20 +53,9 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
         val currentState = uiState.value
         if (currentState is Resource.Success) {
             val alarm = currentState.data
-
-            NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
-
-            val snoozedTimeMillis = System.currentTimeMillis() + alarm.snoozeDuration * 60 * 1000L
-            val snoozedAlarm = alarm.copy(
-                nextTriggerAt = snoozedTimeMillis,
-                enabled = true,
-                snoozeCount = alarm.snoozeCount + 1
-            )
-
             viewModelScope.launch(Dispatchers.IO) {
-                repo.update(snoozedAlarm)
-                scheduler.scheduleAlarm(getApplication(), snoozedAlarm)
-                _uiState.value = Resource.Success(snoozedAlarm)
+                scheduler.scheduleAlarm(getApplication(), alarm, isSnooze = true)
+                _uiState.value = Resource.Success(alarm)
             }
         }
     }
@@ -78,15 +67,14 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
             val alarm = currentState.data
             NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
 
-            if (alarm.daysOfWeek.isEmpty()) {
-                // Non-recurring: disable immediately
-                val disabledAlarm = alarm.copy(enabled = false)
+            if (alarm.isRecurring) {
+                scheduler.scheduleAlarm(getApplication(), alarm)
+            } else {
                 viewModelScope.launch(Dispatchers.IO) {
-                    repo.update(disabledAlarm)
-                    _uiState.value = Resource.Success(disabledAlarm)
+                    repo.update(alarm.copy(enabled = false))
+                    _uiState.value = Resource.Success(alarm)
                 }
             }
-            // Recurring alarms auto-reschedule, so no update needed
         }
     }
 }

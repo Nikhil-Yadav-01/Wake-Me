@@ -32,6 +32,6 @@ data class AlarmEntity(
     var upcomingShown: Boolean = false,
     var createdAt: Long = System.currentTimeMillis(),
     var updatedAt: Long = System.currentTimeMillis(),
-    var nextTriggerAt: Long? = null,
+    var nextTriggerAt: Long,
     var missedCount: Int = 0
 )

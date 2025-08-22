@@ -2,9 +2,9 @@ package com.nikhil.wakeme.alarms
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.data.calculateNextTrigger
 import com.nikhil.wakeme.util.NotificationHelper
 
 object AlarmHandler {
@@ -15,6 +15,7 @@ object AlarmHandler {
      * - Reschedules if recurring, or disables if one-shot
      */
     suspend fun handleTrigger(context: Context, alarmId: Long) {
+        Log.d("AlarmHandler", "handling $alarmId")
         val repo = AlarmRepository(context)
         val alarm = repo.getById(alarmId) ?: return
         if (!alarm.enabled) return
@@ -29,29 +30,16 @@ object AlarmHandler {
         }
         ContextCompat.startForegroundService(context, serviceIntent)
 
-        // Update next occurrence or disable if one-shot
-        if (alarm.isRecurring) {
-            val next = alarm.calculateNextTrigger().timeInMillis
-            val updated = alarm.copy(
-                updatedAt = System.currentTimeMillis(),
-                upcomingShown = false,
-                nextTriggerAt = next
-            )
-            repo.update(updated)
-            AlarmScheduler.scheduleAlarm(context, updated)
-        } else {
-            repo.update(alarm.copy(enabled = false))
-        }
+        Log.d("AlarmHandler", "handled $alarmId")
     }
 
     /**
-     * Show the T-5 min upcoming notification (idempotent).
+     * Show the T-5 min upcoming notification.
      */
     suspend fun handleUpcoming(context: Context, alarmId: Long) {
         val repo = AlarmRepository(context)
         val alarm = repo.getById(alarmId) ?: return
-        if (!alarm.enabled) return
-        if (!alarm.upcomingShown) {
+        if (alarm.enabled && !alarm.upcomingShown) {
             NotificationHelper.showUpcomingAlarmNotification(context, alarm)
             repo.update(alarm.copy(upcomingShown = true))
         }
