@@ -68,7 +68,7 @@ fun AlarmItem(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = String.format("%02d:%02d", alarm.hour, alarm.minute),
+                    text = alarm.timeFormatted,
                     style = MaterialTheme.typography.headlineMedium
                 )
 

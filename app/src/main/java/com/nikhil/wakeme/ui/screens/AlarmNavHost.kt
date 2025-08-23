@@ -1,11 +1,14 @@
 package com.nikhil.wakeme.ui.screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
 
 @Composable
 fun AlarmNavHost() {
@@ -18,12 +21,25 @@ fun AlarmNavHost() {
                 }
             )
         }
+
         composable(
             Routes.EDIT,
             arguments = listOf(navArgument("alarmId") { type = NavType.LongType })
         ) { backStackEntry ->
+            val viewModel: AlarmEditViewModel = viewModel()
             val alarmId = backStackEntry.arguments?.getLong("alarmId") ?: 0L
-            AlarmEditScreen(goBack = { navController.popBackStack() }, alarmId = alarmId)
+            val isNewAlarm = alarmId == 0L
+
+            LaunchedEffect(Unit) {
+                viewModel.loadAlarm(alarmId, isNewAlarm)
+            }
+
+            AlarmEditScreen(
+                alarmId = alarmId,
+                isNewAlarm = isNewAlarm,
+                goBack = { navController.popBackStack() },
+                viewModel = viewModel
+            )
         }
     }
 }

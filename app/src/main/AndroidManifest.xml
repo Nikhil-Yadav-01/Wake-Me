@@ -41,6 +41,7 @@
 
         <receiver
             android:name=".alarms.BootReceiver"
+            android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -52,7 +53,10 @@
             android:name=".alarms.AlarmReceiver"
             android:exported="false" />
 
-        <service android:name=".alarms.AlarmService" android:foregroundServiceType="mediaPlayback" />
+        <service
+            android:name=".alarms.AlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
     </application>
 

@@ -21,6 +21,7 @@ import com.nikhil.wakeme.util.Resource
 import com.nikhil.wakeme.viewmodels.AlarmTriggerViewModel
 import android.content.Intent
 import android.os.CountDownTimer
+import androidx.core.content.ContextCompat
 
 class AlarmTriggerActivity : ComponentActivity() {
     private val viewModel: AlarmTriggerViewModel by viewModels()
@@ -122,6 +123,7 @@ class AlarmTriggerActivity : ComponentActivity() {
                 action = AlarmService.ACTION_START
                 putExtra("ALARM_ID", alarmId)
             }
+            ContextCompat.startForegroundService(this, serviceIntent)
         }
     }
 }

@@ -6,9 +6,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
+import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmEntity
 
 object NotificationHelper {
@@ -19,7 +21,8 @@ object NotificationHelper {
     private const val FULLSCREEN_CHANNEL_NAME = "Wake Me Alarms"
     private const val FULL_SCREEN_REQUEST_CODE = 1001
 
-    fun showUpcomingAlarmNotification(context: Context, alarm: AlarmEntity) {
+    fun showUpcomingAlarmNotification(context: Context, alarm: Alarm) {
+        Log.d("NotificationHelper", "showUpcomingAlarmNotification: ${alarm.id}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 UPCOMING_CHANNEL_ID,
@@ -33,7 +36,7 @@ object NotificationHelper {
         val builder = NotificationCompat.Builder(context, UPCOMING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_wake_pulse)
             .setContentTitle("Upcoming Alarm")
-            .setContentText("Alarm \"${alarm.label ?: "Alarm"}\" in 5 minutes")
+            .setContentText("Alarm in 5 minutes")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
@@ -41,7 +44,8 @@ object NotificationHelper {
         nm.notify(alarm.id.toInt() + 10000, builder.build()) // separate ID
     }
 
-    fun showAlarmNotification(context: Context, alarm: AlarmEntity) {
+    fun showAlarmNotification(context: Context, alarm: Alarm) {
+        Log.d("NotificationHelper", "showAlarmNotification: ${alarm.id}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 FULLSCREEN_CHANNEL_ID,

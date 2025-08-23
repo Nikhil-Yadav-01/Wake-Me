@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
@@ -58,7 +59,7 @@ fun AlarmListScreen(
     val context = LocalContext.current
     val repo = remember { AlarmRepository(context) }
     val scope = rememberCoroutineScope()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var hasExactAlarmPermission by remember {
         mutableStateOf(
@@ -103,16 +104,13 @@ fun AlarmListScreen(
         if (hasExactAlarmPermission) {
             AppScreen(
                 resource = uiState,
-                modifier = Modifier.padding(padding),
                 backgroundResId = R.drawable.alarm_home_bg,
-                onRetry = null,
-                errorMode = ErrorMode.Toast,
-                onError = null,
+                modifier = Modifier.padding(padding),
             ) { lst ->
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(lst, key = { it.id }) { alarm ->
                         AlarmItem(alarm = alarm, onToggle = { enabled ->
-                            val updatedAlarm = alarm.copy(enabled = enabled).toAlarmEntity()
+                            val updatedAlarm = alarm.copy(enabled = enabled)
                             scope.launch {
                                 // Need to convert back to AlarmEntity for repo operations
                                 repo.update(updatedAlarm)
