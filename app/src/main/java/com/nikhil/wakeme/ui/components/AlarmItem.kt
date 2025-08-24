@@ -22,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,18 +44,12 @@ fun AlarmItem(
 ) {
     val color = if (alarm.enabled) AlarmActive else AlarmIdle
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale = if (isPressed) 0.97f else 1f
 
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .padding(vertical = 8.dp),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 10.dp,
@@ -64,7 +60,6 @@ fun AlarmItem(
         interactionSource = interactionSource
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-
             Image(
                 painter = painterResource(R.drawable.alarm_bg),
                 contentDescription = "Background Image",
@@ -75,8 +70,11 @@ fun AlarmItem(
                         Brush.verticalGradient(
                             colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent)
                         )
+                    )
+                    .then(
+                        if (alarm.enabled) Modifier.blur(8.dp).alpha(0.7f) else Modifier
                     ),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
 
             // Foreground content

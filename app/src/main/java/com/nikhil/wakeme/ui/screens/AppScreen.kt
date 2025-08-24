@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -42,7 +44,21 @@ fun <T> AppScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    // Show a blurred view
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .blur(8.dp)
+                            .alpha(0.7f)
+                    )
+
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 4.dp,
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
                 }
             }
 
@@ -98,6 +114,7 @@ fun <T> AppScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
                         text = "No alarms available",
                         style = MaterialTheme.typography.titleLarge,

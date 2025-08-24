@@ -160,8 +160,7 @@ fun AlarmEditContentLazy(
         }
 
         item {
-            DatePickerSection(
-                selectedDate = uiState.now, onDateSelected = { viewModel.setDate(it) })
+            DatePickerSection(selectedDate = uiState.now, onDateSelected = { viewModel.setDate(it) })
         }
 
         item {
@@ -169,9 +168,7 @@ fun AlarmEditContentLazy(
         }
 
         item {
-            ExpandableCard("Repeat Days") {
-                RepeatDaysSection(uiState, viewModel)
-            }
+            RepeatDaysSection(uiState, viewModel)
         }
 
         item {
@@ -179,11 +176,13 @@ fun AlarmEditContentLazy(
                 SnoozeSection(uiState, viewModel)
             }
         }
+
         item {
             ExpandableCard("Ringtone") {
                 RingtoneSection(uiState, ringtonePickerLauncher)
             }
         }
+
         item {
             VibrationSection(uiState, viewModel)
         }
@@ -207,7 +206,8 @@ fun TimePickerSection(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp), contentAlignment = Alignment.Center
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
     ) {
         val cal = Calendar.getInstance().apply { timeInMillis = uiState.now }
         val currentHour = cal.get(Calendar.HOUR_OF_DAY)
