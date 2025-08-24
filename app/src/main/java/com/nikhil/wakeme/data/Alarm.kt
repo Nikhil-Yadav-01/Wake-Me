@@ -12,7 +12,7 @@ data class Alarm(
     val snoozeCount: Int = 0,
     val daysOfWeek: Set<Int> = emptySet(), // Calendar.MONDAY..SUNDAY
     val ringtoneUri: Uri? = null,
-    val ringtoneTitle: String? = "Default",
+    val ringtoneTitle: String? = "Default Ringtone",
     val volume: Float = 1f,
     val vibration: Boolean = true,
     val upcomingShown: Boolean = false,
@@ -43,30 +43,42 @@ data class Alarm(
     fun timeUntilFormatted(): String {
         val diffMillis = nextTriggerAt - System.currentTimeMillis()
         return if (diffMillis > 0) {
+            val days = diffMillis / (1000 * 60 * 60 * 24)
             val hours = diffMillis / (1000 * 60 * 60)
             val minutes = (diffMillis / (1000 * 60)) % 60
-            "Rings in ${hours}h ${minutes}m"
+            if (days > 0) "Rings in ${days}d ${hours}h ${minutes}m"
+            else "Rings in ${hours}h ${minutes}m"
         } else "Expired"
     }
 }
 
 fun Alarm.calculateNextTrigger(): Calendar {
     val tz = TimeZone.getTimeZone(timezoneId)
-
-    if (nextTriggerAt >= originalDateTime) return Calendar.getInstance(tz).apply {
-        timeInMillis = nextTriggerAt
-    }
-
     val now = Calendar.getInstance(tz)
 
-    // Start from the last date/time
-    val nextTrigger = Calendar.getInstance(tz).apply {
-        timeInMillis = nextTriggerAt
+    // For new alarms or when nextTriggerAt is in the past, calculate from originalDateTime
+    val baseTime = if (nextTriggerAt <= now.timeInMillis) {
+        originalDateTime
+    } else {
+        nextTriggerAt
     }
 
-    // One-time alarm
+    // Start from the base time
+    val nextTrigger = Calendar.getInstance(tz).apply {
+        timeInMillis = baseTime
+        set(Calendar.HOUR_OF_DAY, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.HOUR_OF_DAY))
+        set(Calendar.MINUTE, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.MINUTE))
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    // If the calculated time is in the past, move to the next day
+    if (nextTrigger.before(now)) {
+        nextTrigger.add(Calendar.DAY_OF_YEAR, 1)
+    }
+
+    // One-time alarm - just return the next day if it's in the past
     if (daysOfWeek.isEmpty()) {
-        if (nextTrigger.before(now)) nextTrigger.add(Calendar.DAY_OF_YEAR, 1)
         return nextTrigger
     }
 
@@ -83,8 +95,7 @@ fun Alarm.calculateNextTrigger(): Calendar {
         nextTrigger.set(Calendar.MILLISECOND, 0)
     }
 
-    // Fallback: tomorrow
-    nextTrigger.add(Calendar.DAY_OF_YEAR, 1)
+    // Fallback: return the calculated time
     return nextTrigger
 }
 
@@ -104,7 +115,6 @@ fun AlarmEntity.toAlarm(): Alarm {
         daysOfWeek = daySet,
         ringtoneUri = ringtoneUri?.toUri(),
         ringtoneTitle = ringtoneTitle ?: "Default",
-        volume = volume,
         vibration = vibration,
         upcomingShown = upcomingShown,
         createdAt = createdAt,
@@ -134,7 +144,6 @@ fun Alarm.toAlarmEntity(): AlarmEntity {
         daysOfWeekMask = daysOfWeekSetToMask(daysOfWeek),
         ringtoneUri = ringtoneUri?.toString(),
         ringtoneTitle = ringtoneTitle,
-        volume = volume,
         vibration = vibration,
         upcomingShown = upcomingShown,
         createdAt = createdAt,

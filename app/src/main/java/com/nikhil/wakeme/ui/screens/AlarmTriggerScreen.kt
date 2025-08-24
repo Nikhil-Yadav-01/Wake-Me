@@ -44,7 +44,7 @@ fun AlarmTriggerScreen(label: String, onStop: () -> Unit, onSnooze: () -> Unit) 
         modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(R.drawable.alarm_trigger_bg),
+            painter = painterResource(R.drawable.trigeer_bg),
             contentDescription = "Background",
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize(),

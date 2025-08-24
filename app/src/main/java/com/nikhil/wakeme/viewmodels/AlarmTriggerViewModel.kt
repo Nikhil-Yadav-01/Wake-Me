@@ -1,14 +1,12 @@
 package com.nikhil.wakeme.viewmodels
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
-import com.nikhil.wakeme.alarms.AlarmService
 import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.util.NotificationHelper
 import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,37 +39,27 @@ class AlarmTriggerViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    private fun stopAlarmService() {
-        val serviceIntent = Intent(getApplication(), AlarmService::class.java).apply {
-            action = AlarmService.ACTION_STOP
-        }
-        getApplication<Application>().startService(serviceIntent)
-    }
-
     fun snoozeAlarm() {
-        stopAlarmService()
         val currentState = uiState.value
         if (currentState is Resource.Success) {
             val alarm = currentState.data
             viewModelScope.launch(Dispatchers.IO) {
-                scheduler.scheduleAlarm(getApplication(), alarm, isSnooze = true)
+                scheduler.scheduleAlarm(application, alarm, isSnooze = true)
                 _uiState.value = Resource.Success(alarm)
             }
         }
     }
 
     fun stopAlarm() {
-        stopAlarmService()
         val currentState = uiState.value
         if (currentState is Resource.Success) {
             val alarm = currentState.data
-            NotificationHelper.cancelNotification(getApplication(), alarm.id.toInt())
 
             if (alarm.isRecurring) {
-                scheduler.scheduleAlarm(getApplication(), alarm)
+                scheduler.scheduleAlarm(application, alarm)
             } else {
                 viewModelScope.launch(Dispatchers.IO) {
-                    repo.update(alarm.copy(enabled = false))
+                    scheduler.cancelAlarm(application, alarm)
                     _uiState.value = Resource.Success(alarm)
                 }
             }

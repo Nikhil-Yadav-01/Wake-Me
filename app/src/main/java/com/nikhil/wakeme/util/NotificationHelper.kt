@@ -11,7 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.Alarm
-import com.nikhil.wakeme.data.AlarmEntity
+import com.nikhil.wakeme.data.calculateNextTrigger
 
 object NotificationHelper {
     private const val UPCOMING_CHANNEL_ID = "upcoming_alarm_channel"
@@ -25,20 +25,17 @@ object NotificationHelper {
         Log.d("NotificationHelper", "showUpcomingAlarmNotification: ${alarm.id}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                UPCOMING_CHANNEL_ID,
-                UPCOMING_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT
+                UPCOMING_CHANNEL_ID, UPCOMING_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT
             )
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel)
         }
 
+        val time: String = alarm.calculateNextTrigger().time.toString()
         val builder = NotificationCompat.Builder(context, UPCOMING_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_wake_pulse)
-            .setContentTitle("Upcoming Alarm")
-            .setContentText("Alarm in 5 minutes")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
+            .setSmallIcon(R.drawable.ic_wake_pulse).setContentTitle("Upcoming Alarm")
+            .setContentText("Alarm in 5 minutes at $time")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT).setAutoCancel(true)
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(alarm.id.toInt() + 10000, builder.build()) // separate ID
@@ -48,13 +45,12 @@ object NotificationHelper {
         Log.d("NotificationHelper", "showAlarmNotification: ${alarm.id}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                FULLSCREEN_CHANNEL_ID,
-                FULLSCREEN_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
+                FULLSCREEN_CHANNEL_ID, FULLSCREEN_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                setSound(null, null) // sound is handled by AlarmService
+                setSound(null, null)
                 enableVibration(false)
             }
+
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel)
         }
@@ -71,22 +67,20 @@ object NotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, FULLSCREEN_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_wake_pulse)
-            .setContentTitle(alarm.label ?: "Alarm")
-            .setContentText("Time to wake up!")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setSmallIcon(R.drawable.ic_wake_pulse).setContentTitle(alarm.label ?: "Alarm")
+            .setContentText("Time to wake up!").setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
-            .setOngoing(true)
+            .setFullScreenIntent(fullScreenPendingIntent, true).setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(alarm.id.toInt(), builder.build())
     }
 
-    fun cancelNotification(context: Context, alarmId: Int) {
+    fun cancelNotification(context: Context, alarmId: Long) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.cancel(alarmId)
-        nm.cancel(alarmId + 10000) // also cancel upcoming notification if exists
+        val id = alarmId.toInt()
+        nm.cancel(id)
+        nm.cancel(id + 10000) // also cancel upcoming notification if exists
     }
 }

@@ -10,9 +10,6 @@ class AlarmRepository(context: Context) {
     fun getAllFlow(): Flow<List<Alarm>> =
         dao.getAllFlow().map { it.map(AlarmEntity::toAlarm) }
 
-    fun getEnabledAlarmsFlow(): Flow<List<Alarm>> =
-        dao.getEnabledAlarmsFlow().map { it.map(AlarmEntity::toAlarm) }
-
     suspend fun getEnabledAlarmsList(): List<Alarm> =
         dao.getEnabledAlarmsList().map(AlarmEntity::toAlarm)
 

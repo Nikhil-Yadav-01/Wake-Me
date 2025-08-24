@@ -1,4 +1,4 @@
-package com.nikhil.wakeme.ui.components
+package com.nikhil.wakeme.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.Image

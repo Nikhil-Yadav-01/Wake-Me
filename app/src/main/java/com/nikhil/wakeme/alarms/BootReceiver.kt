@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.data.calculateNextTrigger
-import com.nikhil.wakeme.data.toAlarmEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
