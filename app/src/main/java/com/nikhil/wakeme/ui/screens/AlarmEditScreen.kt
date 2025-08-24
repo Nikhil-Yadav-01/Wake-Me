@@ -5,6 +5,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -96,8 +97,7 @@ fun AlarmEditScreen(
     }
 
     Scaffold(
-        topBar = { AlarmEditTopBar(loadState, isNewAlarm, viewModel, goBack) }
-    ) { padding ->
+        topBar = { AlarmEditTopBar(loadState, isNewAlarm, viewModel, goBack) }) { padding ->
         AppScreen(
             resource = loadState,
             modifier = Modifier
@@ -140,7 +140,7 @@ fun AlarmEditTopBar(
 fun AlarmEditContentLazy(
     uiState: AlarmEditViewModel.UiState,
     viewModel: AlarmEditViewModel,
-    ringtonePickerLauncher: androidx.activity.result.ActivityResultLauncher<Intent>,
+    ringtonePickerLauncher: ActivityResultLauncher<Intent>,
     isNewAlarm: Boolean,
     goBack: () -> Unit,
     alarmId: Long
@@ -161,9 +161,7 @@ fun AlarmEditContentLazy(
 
         item {
             DatePickerSection(
-                selectedDate = uiState.now,
-                onDateSelected = { viewModel.setDate(it) }
-            )
+                selectedDate = uiState.now, onDateSelected = { viewModel.setDate(it) })
         }
 
         item {
@@ -204,14 +202,12 @@ fun AlarmEditContentLazy(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerSection(
-    uiState: AlarmEditViewModel.UiState,
-    wheelMode: Boolean,
-    viewModel: AlarmEditViewModel
+    uiState: AlarmEditViewModel.UiState, wheelMode: Boolean, viewModel: AlarmEditViewModel
 ) {
     Box(
-        modifier = Modifier.fillMaxWidth()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp), contentAlignment = Alignment.Center
     ) {
         val cal = Calendar.getInstance().apply { timeInMillis = uiState.now }
         val currentHour = cal.get(Calendar.HOUR_OF_DAY)
@@ -222,8 +218,7 @@ fun TimePickerSection(
                 hour = currentHour,
                 minute = currentMinute,
                 onHourChange = { h -> viewModel.setHour(h) },
-                onMinuteChange = { m -> viewModel.setMinute(m) }
-            )
+                onMinuteChange = { m -> viewModel.setMinute(m) })
         } else {
             val state = rememberTimePickerState(currentHour, currentMinute, true)
             LaunchedEffect(state.hour, state.minute) {
@@ -245,24 +240,20 @@ fun SwitchPickerButton(wheelMode: Boolean, onSwitch: (Boolean) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerSection(
-    selectedDate: Long?, // Pass current selected date in millis
-    onDateSelected: (Long) -> Unit
+    selectedDate: Long?, onDateSelected: (Long) -> Unit
 ) {
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = selectedDate,
-        selectableDates = object : SelectableDates {
+        initialSelectedDateMillis = selectedDate, selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                 return utcTimeMillis >= System.currentTimeMillis()
             }
-        }
-    )
+        })
 
     var showDialog by remember { mutableStateOf(false) }
 
     val formattedDate = remember(selectedDate) {
         selectedDate?.let {
-            DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
-                .format(Date(it))
+            DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault()).format(Date(it))
         } ?: "Select Date"
     }
 
@@ -271,12 +262,10 @@ fun DatePickerSection(
             .fillMaxWidth()
             .clickable(
                 indication = LocalIndication.current,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { showDialog = true }
+                interactionSource = remember { MutableInteractionSource() }) { showDialog = true }
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+        verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = formattedDate,
             style = MaterialTheme.typography.bodyMedium,
@@ -292,23 +281,18 @@ fun DatePickerSection(
     }
 
     if (showDialog) {
-        DatePickerDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { onDateSelected(it) }
-                    showDialog = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
-            }
-        ) {
+        DatePickerDialog(onDismissRequest = { showDialog = false }, confirmButton = {
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+                showDialog = false
+            }) { Text("OK") }
+        }, dismissButton = {
+            TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+        }) {
             DatePicker(state = datePickerState)
         }
     }
 }
-
 
 @Composable
 fun LabelSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewModel) {
@@ -316,7 +300,8 @@ fun LabelSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewMo
         value = uiState.label,
         onValueChange = { viewModel.setLabel(it) },
         label = { Text("Alarm Name") },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .padding(vertical = 16.dp),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
@@ -384,8 +369,7 @@ fun SnoozeSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewM
 
 @Composable
 fun RingtoneSection(
-    uiState: AlarmEditViewModel.UiState,
-    ringtonePickerLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
+    uiState: AlarmEditViewModel.UiState, ringtonePickerLauncher: ActivityResultLauncher<Intent>
 ) {
     OutlinedTextField(
         value = uiState.ringtoneTitle,
@@ -416,12 +400,6 @@ fun RingtoneSection(
             },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            disabledContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedBorderColor = MaterialTheme.colorScheme.outline,
-            disabledBorderColor = MaterialTheme.colorScheme.outline,
             unfocusedTextColor = MaterialTheme.colorScheme.primary,
             focusedTextColor = MaterialTheme.colorScheme.primary,
             disabledTextColor = MaterialTheme.colorScheme.primary
@@ -439,7 +417,6 @@ fun VibrationSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditVi
         Text("Vibrate when ringing")
         Switch(checked = uiState.vibration, onCheckedChange = { viewModel.setVibration(it) })
     }
-
 }
 
 @Composable

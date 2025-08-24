@@ -56,46 +56,47 @@ fun Alarm.calculateNextTrigger(): Calendar {
     val tz = TimeZone.getTimeZone(timezoneId)
     val now = Calendar.getInstance(tz)
 
-    // For new alarms or when nextTriggerAt is in the past, calculate from originalDateTime
-    val baseTime = if (nextTriggerAt <= now.timeInMillis) {
-        originalDateTime
-    } else {
-        nextTriggerAt
-    }
+    // Determine base time: originalDateTime for new alarms or nextTriggerAt if still valid
+    val baseTime = if (nextTriggerAt <= now.timeInMillis) originalDateTime else nextTriggerAt
 
-    // Start from the base time
+    // Extract original hour & minute once to avoid repeated Calendar instances
+    val originalCal = Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }
+    val originalHour = originalCal.get(Calendar.HOUR_OF_DAY)
+    val originalMinute = originalCal.get(Calendar.MINUTE)
+
+    // Start from base time, but reset time to original hour/minute
     val nextTrigger = Calendar.getInstance(tz).apply {
         timeInMillis = baseTime
-        set(Calendar.HOUR_OF_DAY, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.HOUR_OF_DAY))
-        set(Calendar.MINUTE, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.MINUTE))
+        set(Calendar.HOUR_OF_DAY, originalHour)
+        set(Calendar.MINUTE, originalMinute)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }
 
-    // If the calculated time is in the past, move to the next day
+    // If calculated time is still in the past, move to next day
     if (nextTrigger.before(now)) {
         nextTrigger.add(Calendar.DAY_OF_YEAR, 1)
     }
 
-    // One-time alarm - just return the next day if it's in the past
+    // One-time alarm: return this calculated next trigger
     if (daysOfWeek.isEmpty()) {
         return nextTrigger
     }
 
-    // Recurring alarm: find the next enabled day
-    for (i in 0..7) {
+    // Recurring alarm: find the next valid day from the set
+    for (i in 0 until 7) {  // Check for next 7 days max
         val dayOfWeek = nextTrigger.get(Calendar.DAY_OF_WEEK) // 1=Sun ... 7=Sat
         if (daysOfWeek.contains(dayOfWeek) && nextTrigger.after(now)) {
             return nextTrigger
         }
         nextTrigger.add(Calendar.DAY_OF_YEAR, 1)
-        nextTrigger.set(Calendar.HOUR_OF_DAY, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.HOUR_OF_DAY))
-        nextTrigger.set(Calendar.MINUTE, Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }.get(Calendar.MINUTE))
+        nextTrigger.set(Calendar.HOUR_OF_DAY, originalHour)
+        nextTrigger.set(Calendar.MINUTE, originalMinute)
         nextTrigger.set(Calendar.SECOND, 0)
         nextTrigger.set(Calendar.MILLISECOND, 0)
     }
 
-    // Fallback: return the calculated time
+    // Fallback: return the calculated time (shouldn't normally hit this)
     return nextTrigger
 }
 

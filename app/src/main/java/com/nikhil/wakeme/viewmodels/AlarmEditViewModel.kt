@@ -3,6 +3,7 @@ package com.nikhil.wakeme.viewmodels
 import android.app.Application
 import android.media.RingtoneManager
 import android.net.Uri
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
@@ -43,7 +44,7 @@ class AlarmEditViewModel(
     private val _loadState = MutableStateFlow<Resource<Alarm?>>(Resource.Loading())
     val loadState: StateFlow<Resource<Alarm?>> = _loadState
 
-    /** Load alarm from DB in background */
+    /** Load alarm from DB */
     fun loadAlarm(alarmId: Long, isNew: Boolean) {
         if (isNew) {
             _loadState.value = Resource.Success(null) // no DB call
@@ -54,8 +55,9 @@ class AlarmEditViewModel(
             try {
                 val alarm = withContext(Dispatchers.IO) { repository.getById(alarmId) }
                 alarm?.let {
+                    val adjustedNextTrigger = alarm.calculateNextTrigger()
                     _uiState.value = UiState(
-                        now = alarm.originalDateTime,
+                        now = adjustedNextTrigger.timeInMillis,
                         hour = alarm.hour,
                         minute = alarm.minute,
                         label = alarm.label.orEmpty(),
@@ -73,7 +75,7 @@ class AlarmEditViewModel(
         }
     }
 
-    /** Delete alarm in background */
+    /** Delete alarm */
     fun deleteAlarm(alarm: Alarm) {
         try {
             _loadState.value = Resource.Loading()
@@ -87,7 +89,7 @@ class AlarmEditViewModel(
         }
     }
 
-    /** Save alarm in background */
+    /** Save alarm */
     fun saveAlarm(alarmId: Long) {
         try {
             _loadState.value = Resource.Loading()
@@ -105,7 +107,7 @@ class AlarmEditViewModel(
                 vibration = state.vibration
             )
 
-            // Calculate the proper next trigger time
+            // Calculate the next trigger time
             val next = baseAlarm.calculateNextTrigger().timeInMillis
             val alarm = baseAlarm.copy(nextTriggerAt = next)
 
@@ -127,44 +129,20 @@ class AlarmEditViewModel(
         }
     }
 
-    /** ----- UI State Setters (reactive) ----- */
+    /** ----- UI State Setters ----- */
     fun setDate(dateMillis: Long) = _uiState.update { state ->
-        // Preserve existing hour and minute from current state.date
-        val currentCal = Calendar.getInstance().apply { timeInMillis = state.now }
-        val selectedCal = Calendar.getInstance().apply {
-            timeInMillis = dateMillis
-            set(Calendar.HOUR_OF_DAY, currentCal.get(Calendar.HOUR_OF_DAY))
-            set(Calendar.MINUTE, currentCal.get(Calendar.MINUTE))
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        state.copy(now = selectedCal.timeInMillis)
+        val mergedTime = mergeDateAndTime(dateMillis, state.hour, state.minute)
+        state.copy(now = mergedTime)
     }
 
     fun setHour(hour: Int) = _uiState.update { state ->
-        val cal = Calendar.getInstance().apply { timeInMillis = state.now }
-        cal.set(Calendar.HOUR_OF_DAY, hour)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        if (cal.before(Calendar.getInstance())) {
-//            Toast.makeText(getApplication(), "Time is in the past", Toast.LENGTH_SHORT).show()
-            state
-        } else {
-            state.copy(now = cal.timeInMillis)
-        }
+        val mergedTime = mergeDateAndTime(state.now, hour, state.minute)
+        state.copy(hour = hour, now = mergedTime)
     }
 
     fun setMinute(minute: Int) = _uiState.update { state ->
-        val cal = Calendar.getInstance().apply { timeInMillis = state.now }
-        cal.set(Calendar.MINUTE, minute)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        if (cal.before(Calendar.getInstance())) {
-//            Toast.makeText(getApplication(), "Time is in the past", Toast.LENGTH_SHORT).show()
-            state
-        } else {
-            state.copy(now = cal.timeInMillis)
-        }
+        val mergedTime = mergeDateAndTime(state.now, state.hour, minute)
+        state.copy(minute = minute, now = mergedTime)
     }
 
     fun setLabel(label: String) = _uiState.update { it.copy(label = label) }
@@ -195,4 +173,19 @@ class AlarmEditViewModel(
         } catch (_: Exception) {
             "Default Ringtone"
         }
+
+    private fun mergeDateAndTime(dateMillis: Long, hour: Int, minute: Int): Long {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = dateMillis
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        if (cal.before(Calendar.getInstance())) {
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return cal.timeInMillis
+    }
 }

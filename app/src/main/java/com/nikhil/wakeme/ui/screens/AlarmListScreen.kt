@@ -101,7 +101,8 @@ fun AlarmListScreen(
             AppScreen(
                 resource = uiState,
                 backgroundResId = R.drawable.alarm_home_bg,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.padding(padding)
+                    .padding(16.dp),
             ) { lst ->
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(lst, key = { it.id }) { alarm ->

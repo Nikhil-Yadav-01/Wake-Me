@@ -35,7 +35,6 @@ fun ExpandableCard(
             .fillMaxWidth()
             .animateContentSize() // smoothly expand/collapse
             .clickable { expanded = !expanded }
-            .padding(vertical = 8.dp)
             .border(2.dp, gradientBrush(gradients), RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
@@ -60,4 +59,5 @@ fun ExpandableCard(
             }
         }
     }
+    Spacer(modifier = Modifier.height(12.dp))
 }
