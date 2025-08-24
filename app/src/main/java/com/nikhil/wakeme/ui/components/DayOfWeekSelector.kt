@@ -1,20 +1,31 @@
 package com.nikhil.wakeme.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ElevatedFilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.nikhil.wakeme.util.gradientBrush
+import com.nikhil.wakeme.util.gradients
 import java.util.Calendar
 
 @Composable
 fun DayOfWeekSelector(selectedDays: Set<Int>, onDaySelected: (Int, Boolean) -> Unit) {
     Row(
-        modifier = Modifier.Companion.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .padding(vertical = 16.dp)
+            .border(2.dp, gradientBrush(gradients), RoundedCornerShape(20.dp))
+            .padding( 8.dp)
+            .clip(shape = RoundedCornerShape(12.dp)),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         days.forEachIndexed { index, dayLabel ->

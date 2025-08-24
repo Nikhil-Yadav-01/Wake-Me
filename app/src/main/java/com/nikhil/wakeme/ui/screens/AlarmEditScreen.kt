@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -51,6 +53,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +67,8 @@ import com.nikhil.wakeme.ui.components.DayOfWeekSelector
 import com.nikhil.wakeme.ui.components.ExpandableCard
 import com.nikhil.wakeme.ui.components.TimePickerWheel
 import com.nikhil.wakeme.util.Resource
+import com.nikhil.wakeme.util.gradientBrush
+import com.nikhil.wakeme.util.gradients
 import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
 import java.text.DateFormat
 import java.util.Calendar
@@ -160,11 +166,11 @@ fun AlarmEditContentLazy(
         }
 
         item {
-            DatePickerSection(selectedDate = uiState.now, onDateSelected = { viewModel.setDate(it) })
+            LabelSection(uiState, viewModel)
         }
 
         item {
-            LabelSection(uiState, viewModel)
+            DatePickerSection(selectedDate = uiState.now, onDateSelected = { viewModel.setDate(it) })
         }
 
         item {
@@ -263,6 +269,8 @@ fun DatePickerSection(
             .clickable(
                 indication = LocalIndication.current,
                 interactionSource = remember { MutableInteractionSource() }) { showDialog = true }
+            .border(2.dp, gradientBrush(gradients), RoundedCornerShape(20.dp))
+            .clip(shape = RoundedCornerShape(12.dp))
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
@@ -410,7 +418,10 @@ fun RingtoneSection(
 @Composable
 fun VibrationSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewModel) {
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth()
+            .border(2.dp, gradientBrush(gradients), RoundedCornerShape(20.dp))
+            .padding( 8.dp)
+            .clip(shape = RoundedCornerShape(12.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
