@@ -53,6 +53,10 @@
             android:name=".alarms.AlarmReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".alarms.AutoSnoozeReceiver"
+            android:exported="false"/>
+
         <service
             android:name=".alarms.AlarmService"
             android:exported="false"

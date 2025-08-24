@@ -74,7 +74,7 @@ fun TimePickerWheel(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NumberWheel(
-    range: IntRange, value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier.Companion
+    range: IntRange, value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = value)
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -97,15 +97,15 @@ fun NumberWheel(
     Box(
         modifier = modifier
             .height(150.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.15f))
     ) {
         LazyColumn(
             state = listState,
             flingBehavior = flingBehavior,
-            modifier = Modifier.Companion.fillMaxSize(),
-            horizontalAlignment = Alignment.Companion.CenterHorizontally,
-            contentPadding = PaddingValues(vertical = 50.dp)
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(vertical = 48.dp)
         ) {
             items(range.last - range.first + 1) { index ->
                 val number = range.start + index
@@ -118,19 +118,19 @@ fun NumberWheel(
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontSize = with(LocalDensity.current) { textSize.toSp() }),
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = textAlpha),
-                    modifier = Modifier.Companion.padding(vertical = 6.dp)
+                    modifier = Modifier.padding(vertical = 6.dp)
                 )
             }
         }
         Box(
-            modifier = Modifier.Companion
-                .align(Alignment.Companion.Center)
+            modifier = Modifier
+                .align(Alignment.Center)
                 .fillMaxWidth()
                 .height(40.dp)
                 .border(
                     2.dp,
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    RoundedCornerShape(12.dp)
                 )
         )
     }

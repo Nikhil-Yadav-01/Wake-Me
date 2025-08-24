@@ -4,9 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.data.calculateNextTrigger
-import com.nikhil.wakeme.util.NotificationHelper
 
 class AlarmWorker(
     context: Context,

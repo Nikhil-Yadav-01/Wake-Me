@@ -25,7 +25,6 @@ data class AlarmEntity(
     // Sound & Vibration
     var ringtoneUri: String? = null,
     var ringtoneTitle: String? = null,
-    var volume: Float = 1f,
     var vibration: Boolean = true,
 
     // State

@@ -14,9 +14,9 @@ import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
+import com.nikhil.wakeme.AlarmTriggerActivity
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.util.NotificationHelper
@@ -38,10 +38,9 @@ class AlarmService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("AlarmService", "onStartCommand: ${intent?.action}  id: $startId")
         val repo = AlarmRepository(applicationContext)
-
         val alarmId = intent?.getLongExtra("ALARM_ID", -1L) ?: -1L
+
         if (alarmId == -1L) {
             stopSelf()
             return START_NOT_STICKY
@@ -49,8 +48,6 @@ class AlarmService : Service() {
 
         when (intent?.action) {
             ACTION_START -> {
-                if (mediaPlayer?.isPlaying == true) return START_STICKY
-
                 // Start foreground *immediately* (required for Android 12+)
                 val silentNotification = createServiceNotification("Alarm is starting…")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -63,22 +60,26 @@ class AlarmService : Service() {
                     startForeground(SERVICE_NOTIFICATION_ID, silentNotification)
                 }
 
+                if (mediaPlayer?.isPlaying == true) return START_STICKY
                 CoroutineScope(Dispatchers.IO).launch {
                     val alarm = repo.getById(alarmId)
-                    if (alarm != null) {
+
+                    alarm?.let {
                         startAlarm(alarm.ringtoneUri?.toString(), alarm.vibration)
+
+                        val intent = Intent(this@AlarmService, AlarmTriggerActivity::class.java).apply {
+                            this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            putExtra("ALARM_ID", alarmId)
+                        }
+                        startActivity(intent)
                         NotificationHelper.showAlarmNotification(applicationContext, alarm)
-                    } else {
-                        stopSelf()
                     }
                 }
             }
             ACTION_STOP -> {
                 stopAlarm()
-                // Cancel any alarm notification
-                val notificationManager =
-                    getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                notificationManager.cancelAll()
+                NotificationHelper.cancelNotification(applicationContext, alarmId)
+
                 stopSelf()
             }
         }

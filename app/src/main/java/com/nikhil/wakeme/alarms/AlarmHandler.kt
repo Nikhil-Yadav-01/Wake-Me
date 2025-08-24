@@ -2,7 +2,6 @@ package com.nikhil.wakeme.alarms
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.nikhil.wakeme.data.AlarmRepository
 import com.nikhil.wakeme.util.NotificationHelper
@@ -15,22 +14,20 @@ object AlarmHandler {
      * - Reschedules if recurring, or disables if one-shot
      */
     suspend fun handleTrigger(context: Context, alarmId: Long) {
-        Log.d("AlarmHandler", "handling $alarmId")
         val repo = AlarmRepository(context)
         val alarm = repo.getById(alarmId) ?: return
         if (!alarm.enabled) return
 
-        // Cancel upcoming if shown, just in case
-        NotificationHelper.cancelNotification(context, alarm.id.toInt())
+        NotificationHelper.cancelNotification(context, alarm.id)
 
-        // Start the foreground service that plays sound + launches full-screen UI
+        /**
+         * Start the foreground service that plays sound + launches full-screen UI
+        */
         val serviceIntent = Intent(context, AlarmService::class.java).apply {
             action = AlarmService.ACTION_START
             putExtra("ALARM_ID", alarm.id)
         }
         ContextCompat.startForegroundService(context, serviceIntent)
-
-        Log.d("AlarmHandler", "handled $alarmId")
     }
 
     /**

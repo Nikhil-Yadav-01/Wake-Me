@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.Alarm
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.data.calculateNextTrigger
 import com.nikhil.wakeme.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,18 +24,17 @@ class AlarmEditViewModel(
 
     /** UI State observed by Compose */
     data class UiState(
-        val date: Long = Calendar.getInstance().timeInMillis,
+        val now: Long = Calendar.getInstance().timeInMillis,
         val hour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
         val minute: Int = Calendar.getInstance().get(Calendar.MINUTE),
         val label: String = "",
         val snoozeDuration: Int = 10,
         val ringtoneUri: Uri? = null,
-        val ringtoneTitle: String = "Default",
+        val ringtoneTitle: String = "Default Ringtone",
         val daysOfWeek: Set<Int> = emptySet(),
-        val repeatType: String = "Once",
-        val vibration: Boolean = true,
-        val volume: Float = 1f
+        val vibration: Boolean = true
     )
+
     val repository: AlarmRepository = AlarmRepository(app)
 
     private val _uiState = MutableStateFlow(UiState())
@@ -53,19 +53,17 @@ class AlarmEditViewModel(
             _loadState.value = Resource.Loading()
             try {
                 val alarm = withContext(Dispatchers.IO) { repository.getById(alarmId) }
-                if (alarm != null) {
+                alarm?.let {
                     _uiState.value = UiState(
-                        date = alarm.originalDateTime,
+                        now = alarm.originalDateTime,
                         hour = alarm.hour,
                         minute = alarm.minute,
                         label = alarm.label.orEmpty(),
                         snoozeDuration = alarm.snoozeDuration,
                         ringtoneUri = alarm.ringtoneUri,
-                        ringtoneTitle = alarm.ringtoneTitle ?: "Default",
+                        ringtoneTitle = alarm.ringtoneTitle ?: "Default Ringtone",
                         daysOfWeek = alarm.daysOfWeek,
-//                        repeatType = alarm.repeatType ?: "Once",
-                        vibration = alarm.vibration,
-                        volume = alarm.volume
+                        vibration = alarm.vibration
                     )
                 }
                 _loadState.value = Resource.Success(alarm)
@@ -81,7 +79,7 @@ class AlarmEditViewModel(
             _loadState.value = Resource.Loading()
             viewModelScope.launch(Dispatchers.IO) {
                 repository.delete(alarm)
-                AlarmScheduler.cancelAlarm(app, alarm.id)
+                AlarmScheduler.cancelAlarm(app, alarm)
             }
             _loadState.value = Resource.Success(null)
         } catch (e: Exception) {
@@ -94,19 +92,22 @@ class AlarmEditViewModel(
         try {
             _loadState.value = Resource.Loading()
             val state = _uiState.value
-            val alarm = Alarm(
+
+            // Create alarm with proper next trigger calculation
+            val baseAlarm = Alarm(
                 id = alarmId,
-                originalDateTime = state.date,
-                nextTriggerAt = state.date,
+                originalDateTime = state.now,
                 label = state.label,
                 snoozeDuration = state.snoozeDuration,
                 ringtoneUri = state.ringtoneUri,
                 ringtoneTitle = state.ringtoneTitle,
                 daysOfWeek = state.daysOfWeek,
-//            repeatType = state.repeatType,
-                vibration = state.vibration,
-                volume = state.volume
+                vibration = state.vibration
             )
+
+            // Calculate the proper next trigger time
+            val next = baseAlarm.calculateNextTrigger().timeInMillis
+            val alarm = baseAlarm.copy(nextTriggerAt = next)
 
             viewModelScope.launch(Dispatchers.IO) {
                 val savedId = if (alarmId == 0L) {
@@ -125,10 +126,11 @@ class AlarmEditViewModel(
             _loadState.value = Resource.Error("Error saving alarm")
         }
     }
+
     /** ----- UI State Setters (reactive) ----- */
     fun setDate(dateMillis: Long) = _uiState.update { state ->
         // Preserve existing hour and minute from current state.date
-        val currentCal = Calendar.getInstance().apply { timeInMillis = state.date }
+        val currentCal = Calendar.getInstance().apply { timeInMillis = state.now }
         val selectedCal = Calendar.getInstance().apply {
             timeInMillis = dateMillis
             set(Calendar.HOUR_OF_DAY, currentCal.get(Calendar.HOUR_OF_DAY))
@@ -136,22 +138,33 @@ class AlarmEditViewModel(
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        state.copy(date = selectedCal.timeInMillis)
+        state.copy(now = selectedCal.timeInMillis)
     }
 
     fun setHour(hour: Int) = _uiState.update { state ->
-        val cal = Calendar.getInstance().apply { timeInMillis = state.date }
+        val cal = Calendar.getInstance().apply { timeInMillis = state.now }
         cal.set(Calendar.HOUR_OF_DAY, hour)
         cal.set(Calendar.SECOND, 0)
         cal.set(Calendar.MILLISECOND, 0)
-        state.copy(date = cal.timeInMillis)
+        if (cal.before(Calendar.getInstance())) {
+//            Toast.makeText(getApplication(), "Time is in the past", Toast.LENGTH_SHORT).show()
+            state
+        } else {
+            state.copy(now = cal.timeInMillis)
+        }
     }
+
     fun setMinute(minute: Int) = _uiState.update { state ->
-        val cal = Calendar.getInstance().apply { timeInMillis = state.date }
+        val cal = Calendar.getInstance().apply { timeInMillis = state.now }
         cal.set(Calendar.MINUTE, minute)
         cal.set(Calendar.SECOND, 0)
         cal.set(Calendar.MILLISECOND, 0)
-        state.copy(date = cal.timeInMillis)
+        if (cal.before(Calendar.getInstance())) {
+//            Toast.makeText(getApplication(), "Time is in the past", Toast.LENGTH_SHORT).show()
+            state
+        } else {
+            state.copy(now = cal.timeInMillis)
+        }
     }
 
     fun setLabel(label: String) = _uiState.update { it.copy(label = label) }
@@ -170,12 +183,10 @@ class AlarmEditViewModel(
     }
 
     fun setDays(days: Set<Int>) = _uiState.update { it.copy(daysOfWeek = days) }
-    fun setRepeat(type: String) = _uiState.update { it.copy(repeatType = type) }
     fun setVibration(enabled: Boolean) = _uiState.update { it.copy(vibration = enabled) }
-    fun setVolume(volume: Float) = _uiState.update { it.copy(volume = volume) }
 
     /** ----- Helper: Resolve ringtone title safely ----- */
-    private fun resolveRingtoneTitle(uri: Uri?): String =
+    fun resolveRingtoneTitle(uri: Uri?): String =
         try {
             uri?.let {
                 RingtoneManager.getRingtone(getApplication(), it)

@@ -27,7 +27,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,10 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmRepository
-import com.nikhil.wakeme.data.toAlarmEntity
 import com.nikhil.wakeme.ui.components.AlarmItem
-import com.nikhil.wakeme.ui.components.AppScreen
-import com.nikhil.wakeme.ui.components.ErrorMode
 import com.nikhil.wakeme.viewmodels.AlarmListViewModel
 import kotlinx.coroutines.launch
 
@@ -109,20 +105,23 @@ fun AlarmListScreen(
             ) { lst ->
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(lst, key = { it.id }) { alarm ->
-                        AlarmItem(alarm = alarm, onToggle = { enabled ->
-                            val updatedAlarm = alarm.copy(enabled = enabled)
-                            scope.launch {
-                                // Need to convert back to AlarmEntity for repo operations
-                                repo.update(updatedAlarm)
-                                if (enabled) {
-                                    AlarmScheduler.scheduleAlarm(context, updatedAlarm)
-                                } else {
-                                    AlarmScheduler.cancelAlarm(context, alarm.id)
+                        AlarmItem(
+                            alarm = alarm,
+                            onToggle = { enabled ->
+                                val updatedAlarm = alarm.copy(enabled = enabled)
+                                scope.launch {
+                                    repo.update(updatedAlarm)
+                                    if (enabled) {
+                                        AlarmScheduler.scheduleAlarm(context, updatedAlarm)
+                                    } else {
+                                        AlarmScheduler.cancelAlarm(context, alarm)
+                                    }
                                 }
+                            },
+                            onClick = {
+                                onItemClick(alarm.id)
                             }
-                        }, onClick = {
-                            onItemClick(alarm.id)
-                        })
+                        )
                     }
                 }
             }

@@ -6,17 +6,18 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,7 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,7 +47,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,15 +58,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.data.Alarm
-import com.nikhil.wakeme.ui.components.AppScreen
 import com.nikhil.wakeme.ui.components.DayOfWeekSelector
 import com.nikhil.wakeme.ui.components.ExpandableCard
 import com.nikhil.wakeme.ui.components.TimePickerWheel
 import com.nikhil.wakeme.util.Resource
 import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
-import kotlinx.coroutines.launch
 import java.text.DateFormat
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -163,18 +160,14 @@ fun AlarmEditContentLazy(
         }
 
         item {
-            ExpandableCard("Date") {
-                DatePickerSection(
-                    selectedDate = uiState.date,
-                    onDateSelected = { viewModel.setDate(it) }
-                )
-            }
+            DatePickerSection(
+                selectedDate = uiState.now,
+                onDateSelected = { viewModel.setDate(it) }
+            )
         }
 
         item {
-            ExpandableCard("Alarm Name") {
-                LabelSection(uiState, viewModel)
-            }
+            LabelSection(uiState, viewModel)
         }
 
         item {
@@ -182,11 +175,7 @@ fun AlarmEditContentLazy(
                 RepeatDaysSection(uiState, viewModel)
             }
         }
-        item {
-            ExpandableCard("Repeat Type") {
-                RepeatTypeSection(uiState, viewModel)
-            }
-        }
+
         item {
             ExpandableCard("Snooze") {
                 SnoozeSection(uiState, viewModel)
@@ -198,15 +187,7 @@ fun AlarmEditContentLazy(
             }
         }
         item {
-            ExpandableCard("Vibration") {
-                VibrationSection(uiState, viewModel)
-            }
-        }
-
-        item {
-            ExpandableCard("Volume") {
-                VolumeSection(uiState, viewModel)
-            }
+            VibrationSection(uiState, viewModel)
         }
 
         item {
@@ -228,10 +209,11 @@ fun TimePickerSection(
     viewModel: AlarmEditViewModel
 ) {
     Box(
-        Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        val cal = Calendar.getInstance().apply { timeInMillis = uiState.date }
+        val cal = Calendar.getInstance().apply { timeInMillis = uiState.now }
         val currentHour = cal.get(Calendar.HOUR_OF_DAY)
         val currentMinute = cal.get(Calendar.MINUTE)
 
@@ -248,7 +230,9 @@ fun TimePickerSection(
                 viewModel.setHour(state.hour)
                 viewModel.setMinute(state.minute)
             }
-            TimePicker(state)
+            TimePicker(
+                state = state
+            )
         }
     }
 }
@@ -264,34 +248,56 @@ fun DatePickerSection(
     selectedDate: Long?, // Pass current selected date in millis
     onDateSelected: (Long) -> Unit
 ) {
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
-    var showDialog by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDate,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return utcTimeMillis >= System.currentTimeMillis()
+            }
+        }
+    )
 
-    Row (
-        modifier = Modifier.fillMaxWidth()
-            .clickable { showDialog = !showDialog },
+    var showDialog by remember { mutableStateOf(false) }
+
+    val formattedDate = remember(selectedDate) {
+        selectedDate?.let {
+            DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
+                .format(Date(it))
+        } ?: "Select Date"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                indication = LocalIndication.current,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { showDialog = true }
+            .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = selectedDate?.let {
-                DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
-                    .format(Date(it))
-            } ?: "",
+            text = formattedDate,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth().padding(4.dp)
+            modifier = Modifier.weight(1f) // Take remaining space but leave room for icon
+        )
+
+        Icon(
+            painter = painterResource(R.drawable.calendar),
+            contentDescription = "Date",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
         )
     }
-    AnimatedVisibility (showDialog) {
+
+    if (showDialog) {
         DatePickerDialog(
             onDismissRequest = { showDialog = false },
             confirmButton = {
                 TextButton(onClick = {
-                    scope.launch {
-                        datePickerState.selectedDateMillis?.let { onDateSelected(it) }
-                        showDialog = false
-                    }
+                    datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+                    showDialog = false
                 }) { Text("OK") }
             },
             dismissButton = {
@@ -303,14 +309,20 @@ fun DatePickerSection(
     }
 }
 
+
 @Composable
 fun LabelSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewModel) {
     OutlinedTextField(
         value = uiState.label,
         onValueChange = { viewModel.setLabel(it) },
         label = { Text("Alarm Name") },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        modifier = Modifier.fillMaxWidth()
+            .padding(vertical = 16.dp),
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedTextColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = MaterialTheme.colorScheme.primary,
+        )
     )
 }
 
@@ -320,27 +332,6 @@ fun RepeatDaysSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditV
         val newSet = if (isSelected) uiState.daysOfWeek + day else uiState.daysOfWeek - day
         viewModel.setDays(newSet)
     }
-}
-
-@Composable
-fun RepeatTypeSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewModel) {
-    val repeatOptions = listOf("Once", "Weekly", "Monthly", "Custom")
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(repeatOptions) { option ->
-            ElevatedFilterChip(
-                selected = uiState.repeatType == option,
-                onClick = { viewModel.setRepeat(option) },
-                label = { Text(option) },
-                colors = FilterChipDefaults.elevatedFilterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    selectedLabelColor = MaterialTheme.colorScheme.onTertiary
-                )
-            )
-        }
-    }
-
 }
 
 @Composable
@@ -379,10 +370,14 @@ fun SnoozeSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewM
                 customSnooze = sanitized
                 viewModel.setSnooze(sanitized.toIntOrNull() ?: 0)
             },
-            label = { Text("Custom Snooze (minutes)") },
+            label = { Text("Snooze in minutes") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            )
         )
     }
 }
@@ -419,7 +414,18 @@ fun RingtoneSection(
                 }
                 ringtonePickerLauncher.launch(intent)
             },
-        singleLine = true
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedBorderColor = MaterialTheme.colorScheme.outline,
+            disabledBorderColor = MaterialTheme.colorScheme.outline,
+            unfocusedTextColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = MaterialTheme.colorScheme.primary,
+            disabledTextColor = MaterialTheme.colorScheme.primary
+        )
     )
 }
 
@@ -435,20 +441,6 @@ fun VibrationSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditVi
     }
 
 }
-
-@Composable
-fun VolumeSection(uiState: AlarmEditViewModel.UiState, viewModel: AlarmEditViewModel) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Slider(
-            value = uiState.volume,
-            onValueChange = { viewModel.setVolume(it) },
-            valueRange = 0f..1f,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text("Volume: ${(uiState.volume * 100).toInt()}%")
-    }
-}
-
 
 @Composable
 fun SaveButton(isNewAlarm: Boolean, onSave: () -> Unit) {
