@@ -44,7 +44,7 @@ data class Alarm(
         val diffMillis = nextTriggerAt - System.currentTimeMillis()
         return if (diffMillis > 0) {
             val days = diffMillis / (1000 * 60 * 60 * 24)
-            val hours = diffMillis / (1000 * 60 * 60)
+            val hours = (diffMillis / (1000 * 60 * 60)) % 24
             val minutes = (diffMillis / (1000 * 60)) % 60
             if (days > 0) "Rings in ${days}d ${hours}h ${minutes}m"
             else "Rings in ${hours}h ${minutes}m"
