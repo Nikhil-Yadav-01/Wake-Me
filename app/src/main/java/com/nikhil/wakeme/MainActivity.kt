@@ -19,10 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.nikhil.wakeme.ui.screens.AlarmNavHost
 import com.nikhil.wakeme.ui.theme.WakeMeTheme
 import com.nikhil.wakeme.alarms.AlarmScheduler
+import com.nikhil.wakeme.viewmodels.AlarmListViewModel
+import com.nikhil.wakeme.util.Resource
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -69,13 +76,31 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+
+        // Instantiate the AlarmListViewModel
+        val alarmListViewModel = ViewModelProvider(this)[AlarmListViewModel::class.java]
+        var keepSplash = true
+
+        splashScreen.setKeepOnScreenCondition {
+            keepSplash
+        }
+
+        // Observe the alarms uiState
+        lifecycleScope.launch {
+            alarmListViewModel.uiState.collect { state ->
+                keepSplash = state is Resource.Loading
+            }
+        }
         askNotificationPermission()
         checkAndRequestExactAlarmPermission()
         enableEdgeToEdge()
         setContent {
             WakeMeTheme {
-                AlarmNavHost()
+                AlarmNavHost(
+                    alarmListViewModel = alarmListViewModel,
+                    requestPermission = { checkAndRequestExactAlarmPermission() }
+                )
             }
         }
     }

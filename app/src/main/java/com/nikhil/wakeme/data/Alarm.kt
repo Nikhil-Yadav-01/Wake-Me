@@ -2,7 +2,11 @@ package com.nikhil.wakeme.data
 
 import android.net.Uri
 import androidx.core.net.toUri
-import java.util.*
+import java.io.Serializable
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
+import kotlin.math.max
 
 data class Alarm(
     val id: Long = 0L,
@@ -22,13 +26,15 @@ data class Alarm(
     val nextTriggerAt: Long = Calendar.getInstance().timeInMillis,
     val missedCount: Int = 0,
     val timezoneId: String = TimeZone.getDefault().id
-) {
+) : Serializable {
     // Derived properties (computed from `date`)
     val hour: Int
-        get() = Calendar.getInstance().apply { timeInMillis = originalDateTime }.get(Calendar.HOUR_OF_DAY)
+        get() = Calendar.getInstance().apply { timeInMillis = originalDateTime }
+            .get(Calendar.HOUR_OF_DAY)
 
     val minute: Int
-        get() = Calendar.getInstance().apply { timeInMillis = originalDateTime }.get(Calendar.MINUTE)
+        get() = Calendar.getInstance().apply { timeInMillis = originalDateTime }
+            .get(Calendar.MINUTE)
 
     val timeFormatted: String
         get() = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
@@ -57,7 +63,7 @@ fun Alarm.calculateNextTrigger(): Calendar {
     val now = Calendar.getInstance(tz)
 
     // Determine base time: originalDateTime for new alarms or nextTriggerAt if still valid
-    val baseTime = if (nextTriggerAt <= now.timeInMillis) originalDateTime else nextTriggerAt
+    val baseTime = max(nextTriggerAt, now.timeInMillis)
 
     // Extract original hour & minute once to avoid repeated Calendar instances
     val originalCal = Calendar.getInstance(tz).apply { timeInMillis = originalDateTime }

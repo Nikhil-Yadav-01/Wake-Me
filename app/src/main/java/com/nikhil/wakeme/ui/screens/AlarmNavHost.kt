@@ -9,16 +9,29 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.nikhil.wakeme.viewmodels.AlarmEditViewModel
+import com.nikhil.wakeme.viewmodels.AlarmListViewModel
 
 @Composable
-fun AlarmNavHost() {
+fun AlarmNavHost(
+    alarmListViewModel: AlarmListViewModel,
+    requestPermission: () -> Unit
+) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = Routes.LIST) {
         composable(Routes.LIST) {
             AlarmListScreen(
                 onItemClick = { id ->
+                    val alarms = alarmListViewModel.uiState.value
+                    val selectedAlarm =
+                        if (alarms is com.nikhil.wakeme.util.Resource.Success) alarms.data.find { it.id == id } else null
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "alarm",
+                        selectedAlarm
+                    )
                     navController.navigate(Routes.edit(id))
-                }
+                },
+                viewModel = alarmListViewModel,
+                requestPermission = requestPermission
             )
         }
 
@@ -26,19 +39,16 @@ fun AlarmNavHost() {
             Routes.EDIT,
             arguments = listOf(navArgument("alarmId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val viewModel: AlarmEditViewModel = viewModel()
             val alarmId = backStackEntry.arguments?.getLong("alarmId") ?: 0L
-            val isNewAlarm = alarmId == 0L
-
-            LaunchedEffect(Unit) {
-                viewModel.loadAlarm(alarmId, isNewAlarm)
-            }
+            val navAlarm = navController.previousBackStackEntry
+                ?.savedStateHandle?.get<com.nikhil.wakeme.data.Alarm>("alarm")
 
             AlarmEditScreen(
                 alarmId = alarmId,
-                isNewAlarm = isNewAlarm,
+                isNewAlarm = alarmId == 0L,
                 goBack = { navController.popBackStack() },
-                viewModel = viewModel
+                loadedAlarm = navAlarm,
+                viewModel = viewModel()
             )
         }
     }

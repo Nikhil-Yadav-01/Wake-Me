@@ -42,7 +42,7 @@ fun ExpandableCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding( 16.dp),
             horizontalAlignment = Alignment.Companion.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
@@ -59,5 +59,4 @@ fun ExpandableCard(
             }
         }
     }
-    Spacer(modifier = Modifier.height(12.dp))
 }

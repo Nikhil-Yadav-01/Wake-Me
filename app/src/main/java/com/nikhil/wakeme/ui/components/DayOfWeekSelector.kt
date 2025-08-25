@@ -22,9 +22,8 @@ import java.util.Calendar
 fun DayOfWeekSelector(selectedDays: Set<Int>, onDaySelected: (Int, Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth()
-            .padding(vertical = 16.dp)
             .border(2.dp, gradientBrush(gradients), RoundedCornerShape(20.dp))
-            .padding( 8.dp)
+            .padding(8.dp)
             .clip(shape = RoundedCornerShape(12.dp)),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {

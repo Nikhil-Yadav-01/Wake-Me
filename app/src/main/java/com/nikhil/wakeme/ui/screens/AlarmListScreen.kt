@@ -39,10 +39,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nikhil.wakeme.R
 import com.nikhil.wakeme.alarms.AlarmScheduler
 import com.nikhil.wakeme.data.AlarmRepository
+import com.nikhil.wakeme.data.calculateNextTrigger
 import com.nikhil.wakeme.ui.components.AlarmItem
 import com.nikhil.wakeme.viewmodels.AlarmListViewModel
 import kotlinx.coroutines.launch
@@ -50,7 +50,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmListScreen(
-    onItemClick: (Long) -> Unit, viewModel: AlarmListViewModel = viewModel()
+    onItemClick: (Long) -> Unit,
+    viewModel: AlarmListViewModel,
+    requestPermission: () -> Unit
 ) {
     val context = LocalContext.current
     val repo = remember { AlarmRepository(context) }
@@ -59,19 +61,8 @@ fun AlarmListScreen(
 
     var hasExactAlarmPermission by remember {
         mutableStateOf(
-            AlarmScheduler.canScheduleExactAlarms(
-                context
-            )
+            AlarmScheduler.canScheduleExactAlarms(context)
         )
-    }
-
-    fun requestExactAlarmPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = Uri.fromParts("package", context.packageName, null)
-            }
-            context.startActivity(intent)
-        }
     }
 
     Scaffold(topBar = {
@@ -109,23 +100,25 @@ fun AlarmListScreen(
                         .padding(horizontal = 16.dp)
                 ) {
                     items(lst, key = { it.id }) { alarm ->
-                        AlarmItem(
-                            alarm = alarm,
-                            onToggle = { enabled ->
-                                val updatedAlarm = alarm.copy(enabled = enabled)
-                                scope.launch {
-                                    repo.update(updatedAlarm)
-                                    if (enabled) {
-                                        AlarmScheduler.scheduleAlarm(context, updatedAlarm)
-                                    } else {
-                                        AlarmScheduler.cancelAlarm(context, alarm)
-                                    }
+                        AlarmItem(alarm = alarm, onToggle = { enabled ->
+                            scope.launch {
+                                val updatedAlarm = if (enabled) {
+                                    val recalculatedNext =
+                                        alarm.copy(nextTriggerAt = alarm.calculateNextTrigger().timeInMillis)
+                                    recalculatedNext.copy(enabled = true)
+                                } else {
+                                    alarm.copy(enabled = false)
                                 }
-                            },
-                            onClick = {
-                                onItemClick(alarm.id)
+                                repo.update(updatedAlarm)
+                                if (enabled) {
+                                    AlarmScheduler.scheduleAlarm(context, updatedAlarm)
+                                } else {
+                                    AlarmScheduler.cancelAlarm(context, alarm)
+                                }
                             }
-                        )
+                        }, onClick = {
+                            onItemClick(alarm.id)
+                        })
                     }
                 }
             }
@@ -149,14 +142,18 @@ fun AlarmListScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
+
                         Spacer(modifier = Modifier.height(8.dp))
+
                         Text(
                             text = "To ensure alarms work correctly, please grant the permission to schedule exact alarms.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
+
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { requestExactAlarmPermission() }) {
+
+                        Button(onClick = requestPermission) {
                             Text(
                                 "Grant Permission", style = MaterialTheme.typography.labelLarge
                             )

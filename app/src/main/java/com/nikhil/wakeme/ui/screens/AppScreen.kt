@@ -27,8 +27,6 @@ fun <T> AppScreen(
     onError: ((String) -> Unit)? = null,
     onSuccess: @Composable (T) -> Unit
 ) {
-    val context = LocalContext.current
-
     Box(modifier = modifier.fillMaxSize()) {
         // Background
         Image(
@@ -90,6 +88,7 @@ fun <T> AppScreen(
                         }
                     }
                     ErrorMode.Toast -> {
+                        val context = LocalContext.current
                         // Show Toast once
                         LaunchedEffect(resource.message) {
                             Toast.makeText(context, resource.message, Toast.LENGTH_LONG).show()

@@ -8,9 +8,6 @@
         <!-- Use your custom futuristic clock icon -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/futuristic_clock_splash</item>
 
-        <!-- Optional animation duration -->
-        <item name="windowSplashScreenAnimationDuration">400</item>
-
         <!-- The theme to apply after splash -->
         <item name="postSplashScreenTheme">@style/Theme.WakeMe</item>
     </style>

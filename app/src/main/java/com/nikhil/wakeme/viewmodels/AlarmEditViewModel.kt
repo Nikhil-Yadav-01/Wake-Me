@@ -45,30 +45,57 @@ class AlarmEditViewModel(
     val loadState: StateFlow<Resource<Alarm?>> = _loadState
 
     /** Load alarm from DB */
-    fun loadAlarm(alarmId: Long, isNew: Boolean) {
+    fun loadAlarm(alarmId: Long, isNew: Boolean, loadedAlarm: Alarm? = null) {
         if (isNew) {
-            _loadState.value = Resource.Success(null) // no DB call
+            _uiState.value = UiState() // Use the data class default values
+            _loadState.value = Resource.Success(null)
+            return
+        }
+        // If loadedAlarm is provided, use it directly for state
+        loadedAlarm?.let { alarm ->
+            val uiState = UiState(
+                now = alarm.nextTriggerAt,
+                hour = alarm.hour,
+                minute = alarm.minute,
+                label = alarm.label.orEmpty(),
+                snoozeDuration = alarm.snoozeDuration,
+                ringtoneUri = alarm.ringtoneUri,
+                ringtoneTitle = alarm.ringtoneTitle ?: "Default Ringtone",
+                daysOfWeek = alarm.daysOfWeek,
+                vibration = alarm.vibration
+            )
+            _uiState.value = uiState
+            _loadState.value = Resource.Success(alarm)
             return
         }
         viewModelScope.launch {
             _loadState.value = Resource.Loading()
             try {
-                val alarm = withContext(Dispatchers.IO) { repository.getById(alarmId) }
-                alarm?.let {
-                    val adjustedNextTrigger = alarm.calculateNextTrigger()
-                    _uiState.value = UiState(
-                        now = adjustedNextTrigger.timeInMillis,
-                        hour = alarm.hour,
-                        minute = alarm.minute,
-                        label = alarm.label.orEmpty(),
-                        snoozeDuration = alarm.snoozeDuration,
-                        ringtoneUri = alarm.ringtoneUri,
-                        ringtoneTitle = alarm.ringtoneTitle ?: "Default Ringtone",
-                        daysOfWeek = alarm.daysOfWeek,
-                        vibration = alarm.vibration
-                    )
+                val alarmAndState = withContext(Dispatchers.IO) {
+                    val alarm = repository.getById(alarmId)
+                    alarm?.let {
+                        val adjustedNextTime = it.calculateNextTrigger().timeInMillis
+                        val uiState = UiState(
+                            now = adjustedNextTime,
+                            hour = it.hour,
+                            minute = it.minute,
+                            label = it.label.orEmpty(),
+                            snoozeDuration = it.snoozeDuration,
+                            ringtoneUri = it.ringtoneUri,
+                            ringtoneTitle = it.ringtoneTitle ?: "Default Ringtone",
+                            daysOfWeek = it.daysOfWeek,
+                            vibration = it.vibration
+                        )
+                        Pair(alarm, uiState)
+                    }
                 }
-                _loadState.value = Resource.Success(alarm)
+                // Switch to main thread only for UI state updates
+                alarmAndState?.let { (alarm, uiState) ->
+                    _uiState.value = uiState
+                    _loadState.value = Resource.Success(alarm)
+                } ?: run {
+                    _loadState.value = Resource.Success(null)
+                }
             } catch (e: Exception) {
                 _loadState.value = Resource.Error(e.localizedMessage ?: "Error loading alarm")
             }
